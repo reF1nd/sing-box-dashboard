@@ -60,6 +60,39 @@ export function EmptyState(props: { icon?: IconName; children: ReactNode }) {
   );
 }
 
+// Chevron row of the Tools and Settings menu pages; `detail` is the trailing
+// secondary value (e.g. the active server name), like a SwiftUI NavigationLink.
+// With `href` it becomes an external link, trading the chevron for the
+// open-in-new glyph.
+export function NavRow(props: {
+  icon: IconName;
+  title: string;
+  detail?: ReactNode;
+  onClick?: () => void;
+  href?: string;
+}) {
+  const inner = (
+    <>
+      <Icon name={props.icon} size={15} />
+      <span>{props.title}</span>
+      {props.detail != null && <span className="nav-row-detail">{props.detail}</span>}
+      <Icon name={props.href ? "open_in_new" : "keyboard_arrow_right"} size={14} />
+    </>
+  );
+  if (props.href) {
+    return (
+      <a className="nav-row" href={props.href} target="_blank" rel="noreferrer">
+        {inner}
+      </a>
+    );
+  }
+  return (
+    <button className="nav-row" onClick={props.onClick}>
+      {inner}
+    </button>
+  );
+}
+
 export function SegmentedControl(props: {
   options: { value: string; label: string }[];
   value: string;

@@ -81,6 +81,8 @@ export const TRANSLATIONS = {
   "Servers": { "zh-Hans": "服务器", "zh-Hant": "伺服器", "fa": "سرورها", "ru": "Серверы" },
   "Add server": { "zh-Hans": "添加服务器", "zh-Hant": "添加伺服器", "fa": "افزودن سرور", "ru": "Добавить сервер" },
   "Preferences": { "zh-Hans": "偏好设置", "zh-Hant": "偏好設置", "fa": "ترجیحات", "ru": "Параметры" },
+  "About": { "zh-Hans": "关于", "zh-Hant": "關於", "fa": "درباره", "ru": "О программе" },
+  "Source Code": { "zh-Hans": "源代码", "zh-Hant": "原始碼", "fa": "کد منبع", "ru": "Исходный код" },
   "Appearance": { "zh-Hans": "外观", "zh-Hant": "外觀", "fa": "ظاهر", "ru": "Оформление" },
   "System": { "zh-Hans": "跟随系统", "zh-Hant": "跟隨系統", "fa": "سیستم", "ru": "Как в системе" },
   "Light": { "zh-Hans": "浅色", "zh-Hant": "淺色", "fa": "روشن", "ru": "Светлая" },

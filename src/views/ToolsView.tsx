@@ -12,8 +12,8 @@ import { useStream } from "../api/stream";
 import { navigate, useApi } from "../app/context";
 import { useStreamingAction } from "../app/hooks";
 import { useI18n } from "../app/i18n";
-import { Icon, type IconName } from "../components/Icon";
-import { Badge, Card, DataLine, Field, Spinner, Toggle } from "../components/ui";
+import { Icon } from "../components/Icon";
+import { Badge, Card, DataLine, Field, NavRow, Spinner, Toggle } from "../components/ui";
 import {
   ServiceStatus_Type,
   type NetworkQualityTestProgress,
@@ -80,16 +80,6 @@ function TailscaleEndpointRows() {
         ))}
       </div>
     </div>
-  );
-}
-
-function NavRow(props: { icon: IconName; title: string; onClick: () => void }) {
-  return (
-    <button className="nav-row" onClick={props.onClick}>
-      <Icon name={props.icon} size={15} />
-      <span>{props.title}</span>
-      <Icon name="keyboard_arrow_right" size={14} />
-    </button>
   );
 }
 

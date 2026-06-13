@@ -60,6 +60,9 @@ const ICONS = {
   drag_handle: "filled",
   menu: "filled",
   dns: "filled",
+  // settings about
+  description: "outlined",
+  code: "outlined",
   // theme picker
   brightness_auto: "filled",
   light_mode: "filled",

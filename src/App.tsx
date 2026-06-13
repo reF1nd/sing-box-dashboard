@@ -37,7 +37,7 @@ import { ConnectionsView } from "./views/ConnectionsView";
 import { GroupsView } from "./views/GroupsView";
 import { LogsView } from "./views/LogsView";
 import { OverviewView } from "./views/OverviewView";
-import { ServersView, SettingsView } from "./views/SettingsView";
+import { PreferencesView, ServersView, SettingsView } from "./views/SettingsView";
 import { SetupView } from "./views/SetupView";
 import { NetworkQualityView, STUNTestView, ToolsView } from "./views/ToolsView";
 import { TailscaleEndpointView } from "./views/TailscaleView";
@@ -54,6 +54,7 @@ export type Route =
   | { page: "tools/tailscale"; tag: string }
   | { page: "tools/tailscale/ssh"; tag: string; peerID: string; username: string; terminalType: string }
   | { page: "settings" }
+  | { page: "settings/preferences" }
   | { page: "settings/servers" };
 
 // decodeURIComponent throws on malformed escapes (e.g. "#/%"); this runs in
@@ -102,7 +103,14 @@ function routeFromHash(): Route {
           return { page: "tools" };
       }
     case "settings":
-      return segments[1] === "servers" ? { page: "settings/servers" } : { page: "settings" };
+      switch (segments[1]) {
+        case "preferences":
+          return { page: "settings/preferences" };
+        case "servers":
+          return { page: "settings/servers" };
+        default:
+          return { page: "settings" };
+      }
     default:
       return { page: "overview" };
   }
@@ -412,9 +420,9 @@ function ShellContent(props: {
         {route.page === "tools/network-quality" && <NetworkQualityView />}
         {route.page === "tools/stun" && <STUNTestView />}
         {route.page === "tools/tailscale" && <TailscaleEndpointView tag={route.tag} />}
-        {route.page === "settings" && (
-          <SettingsView
-            serversState={props.serversState}
+        {route.page === "settings" && <SettingsView serversState={props.serversState} />}
+        {route.page === "settings/preferences" && (
+          <PreferencesView
             theme={props.theme}
             onThemeChange={props.onThemeChange}
             accent={props.accent}

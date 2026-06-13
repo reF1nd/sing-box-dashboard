@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import {
   createServerId,
@@ -12,15 +12,10 @@ import {
 import { navigate, type AccentPreference, type ThemePreference } from "../app/context";
 import { LanguageSelect, useI18n } from "../app/i18n";
 import { Icon } from "../components/Icon";
-import { Dialog, Field, ThemeMenu, ThemeSelect } from "../components/ui";
+import { Dialog, Field, NavRow, ThemeMenu, ThemeSelect } from "../components/ui";
 
-export function SettingsView(props: {
-  serversState: ServersState;
-  theme: ThemePreference;
-  onThemeChange: (theme: ThemePreference) => void;
-  accent: AccentPreference;
-  onAccentChange: (accent: AccentPreference) => void;
-}) {
+// Top-level Settings page: a menu of sub-pages, like the Tools page.
+export function SettingsView(props: { serversState: ServersState }) {
   const { t } = useI18n();
   const { servers, activeId } = props.serversState;
   const active = servers.find((server) => server.id === activeId) ?? servers[0];
@@ -30,26 +25,65 @@ export function SettingsView(props: {
       <div className="page-header">
         <h1 className="page-title">{t("Settings")}</h1>
       </div>
-      <div className="settings-section">
-        <h2 className="settings-section-title">{t("Servers")}</h2>
-        <button className="settings-server-link" onClick={() => navigate("settings/servers")}>
-          <span className="settings-server-link-icon">
-            <Icon name="dns" size={17} />
-          </span>
-          <span className="settings-server-link-text">
-            <span className="server-row-name">{active ? serverDisplayName(active) : ""}</span>
-            <span className="server-row-url">{active?.url}</span>
-          </span>
-          {servers.length > 1 && (
-            <span className="settings-server-link-count">{servers.length}</span>
-          )}
-          <span className="settings-row-chevron">
-            <Icon name="keyboard_arrow_right" size={14} />
-          </span>
-        </button>
+      <div className="settings-stack">
+        <div className="nav-list">
+          <NavRow
+            icon="tune"
+            title={t("Preferences")}
+            onClick={() => navigate("settings/preferences")}
+          />
+          <NavRow
+            icon="dns"
+            title={t("Servers")}
+            detail={active ? serverDisplayName(active) : undefined}
+            onClick={() => navigate("settings/servers")}
+          />
+        </div>
+        <div>
+          <div className="list-section-title">{t("About")}</div>
+          <div className="nav-list">
+            <NavRow
+              icon="description"
+              title={t("Documentation")}
+              href="https://sing-box.sagernet.org"
+            />
+            <NavRow
+              icon="code"
+              title={t("Source Code")}
+              href="https://github.com/SagerNet/sing-box-dashboard"
+            />
+          </div>
+        </div>
       </div>
-      <div className="settings-section">
-        <h2 className="settings-section-title">{t("Preferences")}</h2>
+    </div>
+  );
+}
+
+function SettingsPageHeader(props: { title: string; action?: ReactNode }) {
+  const { t } = useI18n();
+  return (
+    <div className="page-header">
+      <button className="back-button" aria-label={t("Settings")} onClick={() => navigate("settings")}>
+        <Icon name="arrow_back" size={20} />
+      </button>
+      <h1 className="page-title">{props.title}</h1>
+      {props.action && <div className="actions">{props.action}</div>}
+    </div>
+  );
+}
+
+// Settings → Preferences sub-page: the appearance / theme / language rows.
+export function PreferencesView(props: {
+  theme: ThemePreference;
+  onThemeChange: (theme: ThemePreference) => void;
+  accent: AccentPreference;
+  onAccentChange: (accent: AccentPreference) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <div className="page">
+      <SettingsPageHeader title={t("Preferences")} />
+      <div className="settings-list">
         <div className="settings-row">
           <span className="settings-row-label">{t("Appearance")}</span>
           <ThemeSelect theme={props.theme} onChange={props.onThemeChange} />
@@ -89,19 +123,20 @@ export function ServersView(props: {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <button className="back-button" aria-label={t("Settings")} onClick={() => navigate("settings")}>
-          <Icon name="arrow_back" size={20} />
-        </button>
-        <h1 className="page-title">{t("Servers")}</h1>
-      </div>
+      <SettingsPageHeader
+        title={t("Servers")}
+        action={
+          <button
+            className="icon-button"
+            aria-label={t("Add server")}
+            title={t("Add server")}
+            onClick={() => setEditing("new")}
+          >
+            <Icon name="add" size={18} />
+          </button>
+        }
+      />
       <div className="server-list">
-        <button className="server-item-add" onClick={() => setEditing("new")}>
-          <span className="server-item-icon">
-            <Icon name="add" size={15} />
-          </span>
-          {t("Add server")}
-        </button>
         {servers.map((server) => (
           <button className="server-item" key={server.id} onClick={() => setEditing(server)}>
             <span className="server-item-text">
