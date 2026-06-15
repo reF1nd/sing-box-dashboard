@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { normalizeServerUrl, type Server } from "../api/config";
 import { DaemonApi } from "../api/daemon";
@@ -13,7 +13,7 @@ export interface Reachability {
   error: string | null;
 }
 
-const DEBOUNCE_MS = 600;
+const DEBOUNCE_MS = 300;
 const PROBE_TIMEOUT_MS = 8000;
 
 async function probeReachable(server: Server, signal: AbortSignal): Promise<void> {
@@ -42,8 +42,11 @@ export function useServerReachability(url: string, secret: string): Reachability
   const { t } = useI18n();
   const normalized = normalizeServerUrl(url);
   const [state, setState] = useState<Reachability>({ status: "idle", error: null });
+  const firstRun = useRef(true);
 
   useEffect(() => {
+    const immediate = firstRun.current;
+    firstRun.current = false;
     if (normalized === "") {
       setState({ status: "idle", error: null });
       return;
@@ -74,7 +77,7 @@ export function useServerReachability(url: string, secret: string): Reachability
           setState({ status: "offline", error: message });
         })
         .finally(() => clearTimeout(timeout));
-    }, DEBOUNCE_MS);
+    }, immediate ? 0 : DEBOUNCE_MS);
 
     return () => {
       cancelled = true;
