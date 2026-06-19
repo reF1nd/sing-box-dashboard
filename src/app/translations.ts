@@ -122,14 +122,6 @@ export const TRANSLATIONS = {
   "Reset": { "zh-Hans": "重置", "zh-Hant": "重置", "fa": "بازنشانی", "ru": "Сброс" },
   "Done": { "zh-Hans": "完成", "zh-Hant": "完成", "fa": "انجام شد", "ru": "Готово" },
 
-  "Failed to subscribe to {subject}: {error}": { "zh-Hans": "订阅{subject}失败：{error}", "zh-Hant": "訂閱{subject}失敗：{error}", "fa": "اشتراک در {subject} ناموفق بود: {error}", "ru": "Не удалось подписаться на {subject}: {error}" },
-  "Check the server address and secret in Settings.": { "zh-Hans": "请检查设置中的服务器地址和密钥。", "zh-Hant": "請檢查設置中的伺服器地址和密鑰。", "fa": "آدرس سرور و رمز را در تنظیمات بررسی کنید.", "ru": "Проверьте адрес сервера и секрет в настройках." },
-  "service status": { "zh-Hans": "服务状态", "zh-Hant": "服務狀態", "fa": "وضعیت سرویس", "ru": "состояние службы" },
-  "groups": { "zh-Hans": "组", "zh-Hant": "組", "fa": "گروه‌ها", "ru": "группы" },
-  "connections": { "zh-Hans": "连接", "zh-Hant": "連接", "fa": "اتصال‌ها", "ru": "подключения" },
-  "logs": { "zh-Hans": "日志", "zh-Hant": "日誌", "fa": "گزارش", "ru": "журнал" },
-  "Tailscale status": { "zh-Hans": "Tailscale 状态", "zh-Hant": "Tailscale 狀態", "fa": "وضعیت Tailscale", "ru": "состояние Tailscale" },
-
   "Empty groups": { "zh-Hans": "无分组", "zh-Hant": "無分組", "fa": "بدون گروه", "ru": "Нет групп" },
   "Loading...": { "zh-Hans": "加载中...", "zh-Hant": "加載中...", "fa": "در حال بارگذاری...", "ru": "Загрузка..." },
   "URL test": { "zh-Hans": "URL 测试", "zh-Hant": "URL 測試", "fa": "تست URL", "ru": "URL-тест" },
@@ -295,7 +287,6 @@ export const TRANSLATIONS = {
   "Services": { "zh-Hans": "服务", "zh-Hant": "服務", "fa": "سرویس‌ها", "ru": "Службы" },
   "USB/IP": { "zh-Hans": "USB/IP", "zh-Hant": "USB/IP", "fa": "USB/IP", "ru": "USB/IP" },
   "USB/IP: {tag}": { "zh-Hans": "USB/IP：{tag}", "zh-Hant": "USB/IP：{tag}", "fa": "USB/IP: {tag}", "ru": "USB/IP: {tag}" },
-  "USB/IP servers": { "zh-Hans": "USB/IP 服务器", "zh-Hant": "USB/IP 伺服器", "fa": "سرورهای USB/IP", "ru": "Серверы USB/IP" },
   "No usbip-server found": { "zh-Hans": "未找到 usbip-server", "zh-Hant": "未找到 usbip-server", "fa": "هیچ usbip-server یافت نشد", "ru": "usbip-server не найден" },
   "Devices": { "zh-Hans": "设备", "zh-Hant": "裝置", "fa": "دستگاه‌ها", "ru": "Устройства" },
   "No devices shared yet.": { "zh-Hans": "尚未共享任何设备。", "zh-Hant": "尚未共享任何裝置。", "fa": "هنوز دستگاهی به اشتراک گذاشته نشده است.", "ru": "Пока нет общих устройств." },

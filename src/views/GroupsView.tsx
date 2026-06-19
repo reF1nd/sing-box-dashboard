@@ -25,7 +25,6 @@ export function GroupsView() {
       </div>
       <StreamStates
         snapshot={groups}
-        subject="groups"
         loaded={groups.data.loaded}
         empty={groups.data.groups.length === 0}
         emptyIcon="folder"

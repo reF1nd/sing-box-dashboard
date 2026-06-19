@@ -80,7 +80,6 @@ export function UsbipView(props: { tag: string }) {
       />
       <StreamStates
         snapshot={usbip}
-        subject="USB/IP servers"
         loaded={usbip.data.loaded}
         empty={!server}
         emptyIcon="usb"

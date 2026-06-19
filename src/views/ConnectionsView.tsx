@@ -145,7 +145,6 @@ export function ConnectionsView() {
       </div>
       <StreamStates
         snapshot={connections}
-        subject="connections"
         loaded={connections.data.loaded}
         empty={rows.length === 0}
         emptyIcon="swap_vert"

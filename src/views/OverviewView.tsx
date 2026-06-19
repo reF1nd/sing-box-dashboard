@@ -73,7 +73,7 @@ export function OverviewView() {
           </div>
         )}
       </div>
-      <StreamBanner snapshot={serviceStatus} subject="service status" />
+      <StreamBanner snapshot={serviceStatus} />
       {stateLabel !== null && <EmptyState icon="dashboard">{stateLabel}</EmptyState>}
       {started && <OverviewCards config={cardsConfig} />}
       {managing && (

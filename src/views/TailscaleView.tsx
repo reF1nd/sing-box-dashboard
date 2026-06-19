@@ -170,7 +170,6 @@ export function TailscaleEndpointView(props: { tag: string }) {
       />
       <StreamStates
         snapshot={tailscale}
-        subject="Tailscale status"
         loaded={tailscale.data.loaded}
         empty={!endpoint}
         emptyIcon="hub"

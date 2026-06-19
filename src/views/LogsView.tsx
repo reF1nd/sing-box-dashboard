@@ -216,7 +216,7 @@ export function LogsView() {
       <div className="field">
         <SearchInput value={search} onChange={setSearch} />
       </div>
-      <StreamErrorBanner error={outage} subject="logs" />
+      <StreamErrorBanner error={outage} />
       {body}
     </div>
   );
