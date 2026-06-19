@@ -13,6 +13,8 @@ export function useStreamOutage(
   const [outage, setOutage] = useState<string | null>(null);
   const lastError = useRef("");
   const timer = useRef<number | null>(null);
+  const phase = snapshot.phase;
+  const error = snapshot.error;
   useEffect(() => {
     const cancel = () => {
       if (timer.current !== null) {
@@ -20,11 +22,11 @@ export function useStreamOutage(
         timer.current = null;
       }
     };
-    if (snapshot.phase === "active") {
+    if (phase === "active") {
       cancel();
-      setOutage(null);
-    } else if (snapshot.phase === "error") {
-      lastError.current = snapshot.error ?? "";
+      setOutage((prev) => (prev === null ? prev : null));
+    } else if (phase === "error") {
+      lastError.current = error ?? "";
       if (immediate) {
         cancel();
         setOutage(lastError.current);
@@ -35,7 +37,7 @@ export function useStreamOutage(
         }, graceMs);
       }
     }
-  }, [snapshot, immediate, graceMs]);
+  }, [phase, error, immediate, graceMs]);
   useEffect(() => {
     const pending = timer;
     return () => {

@@ -12,7 +12,7 @@ describe("StreamStore", () => {
     vi.useRealTimers();
   });
 
-  it("starts the stream on the first subscriber and publishes updates", () => {
+  it("starts the stream on the first subscriber and publishes updates", async () => {
     const store = new StreamStore<number[]>(
       () => [],
       async ({ update }) => {
@@ -27,7 +27,32 @@ describe("StreamStore", () => {
 
     expect(store.getSnapshot().phase).toBe("active");
     expect(store.getSnapshot().data).toEqual([1]);
+    await vi.advanceTimersByTimeAsync(0);
     expect(notified).toBeGreaterThan(0);
+    unsubscribe();
+  });
+
+  it("coalesces a burst of updates into a single notification", async () => {
+    const store = new StreamStore<number>(
+      () => 0,
+      async ({ update }) => {
+        for (let i = 1; i <= 100; i += 1) {
+          update(() => i);
+        }
+        await new Promise(() => {});
+      },
+    );
+    let notified = 0;
+    const unsubscribe = store.subscribe(() => {
+      notified += 1;
+    });
+
+    expect(store.getSnapshot().data).toBe(100);
+    expect(notified).toBe(0);
+
+    await vi.advanceTimersByTimeAsync(0);
+    expect(notified).toBe(1);
+    expect(store.getSnapshot().data).toBe(100);
     unsubscribe();
   });
 
