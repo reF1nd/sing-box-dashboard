@@ -41,6 +41,9 @@
    vendor selectors can hook the feature; these rules previously lived in
    globals.css and are co-located with the terminal view here. */
 :global(.page.terminal-page) {
+  --scrollbar-thumb: var(--scrollbar-thumb-on-dark);
+  --scrollbar-thumb-hover: var(--scrollbar-thumb-hover-on-dark);
+
   padding: 0;
 }
 
@@ -78,21 +81,21 @@
 
 :global(.terminal-page .xterm-scrollable-element > .scrollbar.vertical),
 :global(.terminal-page .xterm-scrollable-element > .scrollbar.vertical > .slider) {
-  width: 7px !important;
+  width: var(--scrollbar-size) !important;
 }
 
 :global(.terminal-page .xterm-scrollable-element > .scrollbar.horizontal),
 :global(.terminal-page .xterm-scrollable-element > .scrollbar.horizontal > .slider) {
-  height: 7px !important;
+  height: var(--scrollbar-size) !important;
 }
 
 :global(.terminal-page .xterm-scrollable-element > .scrollbar > .slider) {
-  background: rgb(255 255 255 / 22%) !important;
+  background: var(--scrollbar-thumb) !important;
   border-radius: var(--radius-xs);
 }
 
 :global(.terminal-page .xterm-scrollable-element > .scrollbar > .slider:hover) {
-  background: rgb(255 255 255 / 38%) !important;
+  background: var(--scrollbar-thumb-hover) !important;
 }
 
 .terminal-connecting {

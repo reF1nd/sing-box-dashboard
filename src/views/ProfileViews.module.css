@@ -53,20 +53,30 @@
   width: min(480px, 90vw);
 }
 
+.profile-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .profile-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-8);
   max-height: 50vh;
   overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .profile-row {
   display: flex;
   gap: var(--space-8);
   align-items: center;
-  padding: var(--space-4) var(--space-6);
-  border-radius: var(--radius-control);
+  padding: var(--space-6) var(--space-10);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
 }
 
 .profile-row.dragging {
@@ -75,6 +85,9 @@
 
 .drag-handle {
   display: inline-flex;
+  flex-shrink: 0;
+  justify-content: center;
+  width: 16px;
   color: var(--text-faint);
   touch-action: none;
   cursor: grab;
@@ -121,23 +134,81 @@
   align-items: center;
 }
 
-.profile-editor-dialog {
+dialog.profile-editor-dialog {
   width: min(720px, 90vw);
 }
 
 .profile-editor {
   box-sizing: border-box;
   width: 100%;
-  min-height: 50vh;
-  padding: var(--space-10);
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  line-height: 1.5;
+  height: 50vh;
+}
+
+.editor-banner {
+  margin-top: var(--space-10);
+  margin-bottom: 0;
+}
+
+.editor-banner-message {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.editor-toolbar {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--space-6);
+  align-items: center;
+  margin-top: var(--space-10);
+  overflow: auto hidden;
+  scrollbar-width: none;
+}
+
+.editor-toolbar::-webkit-scrollbar {
+  display: none;
+}
+
+.editor-key {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: var(--control-height);
+  padding: 0 var(--space-8);
+  font-size: var(--text-md);
+  line-height: 1;
   color: var(--text);
-  resize: vertical;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  cursor: pointer;
+  user-select: none;
+  background: var(--hover);
+  border: none;
+  border-radius: var(--radius-control);
+  transition: background var(--transition-fast);
+}
+
+.editor-key:active:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.editor-key:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.editor-symbol {
+  font-family: var(--font-mono);
+}
+
+.editor-toolbar-divider {
+  flex: 0 0 auto;
+  width: 5px;
+  height: 5px;
+  margin: 0 var(--space-2);
+  background: var(--text-faint);
+  border-radius: 50%;
+  opacity: 0.5;
 }
 
 .spin {

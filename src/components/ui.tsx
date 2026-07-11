@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type KeyboardEvent, type MouseEventHandler, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type KeyboardEvent, type MouseEventHandler, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { encode as encodeQR } from "uqr";
 
@@ -395,21 +395,14 @@ export function Select<T extends string | number>(props: {
   placeholder?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const [openUp, setOpenUp] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   useDismiss(ref, open, () => setOpen(false));
+  useMenuPopover(ref, listRef, open, () => setOpen(false), {
+    width: props.inline ? "min-anchor" : "anchor",
+  });
 
   const selected = props.options.find((option) => option.value === props.value);
-
-  const toggle = () => {
-    if (!open && ref.current) {
-      const rect = ref.current.getBoundingClientRect();
-      const below = window.innerHeight - rect.bottom;
-      setOpenUp(below < 260 && rect.top > below);
-    }
-    setOpen(!open);
-  };
 
   const select = (value: T) => {
     setOpen(false);
@@ -451,7 +444,7 @@ export function Select<T extends string | number>(props: {
         aria-haspopup="listbox"
         aria-expanded={open}
         disabled={props.disabled}
-        onClick={toggle}
+        onClick={() => setOpen(!open)}
       >
         <span className={selected ? "select-value" : "select-value select-placeholder"}>
           {selected ? selected.label : props.placeholder}
@@ -459,14 +452,11 @@ export function Select<T extends string | number>(props: {
       </button>
       {open && (
         <div
+          popover="manual"
           className={
             props.inline
-              ? openUp
-                ? "menu select-menu grow open-up"
-                : "menu select-menu grow"
-              : openUp
-                ? "menu select-menu open-up"
-                : "menu select-menu"
+              ? "menu popover-menu select-menu grow"
+              : "menu popover-menu select-menu"
           }
           role="listbox"
           ref={listRef}
@@ -551,19 +541,71 @@ export function AdaptiveSegmented(props: {
   );
 }
 
-export function OthersMenu(props: { children: ReactNode; icon?: IconName; className?: string }) {
+function useMenuPopover(
+  anchorRef: RefObject<HTMLElement | null>,
+  menuRef: RefObject<HTMLDivElement | null>,
+  open: boolean,
+  onDismiss: () => void,
+  options?: { alignEnd?: boolean; width?: "anchor" | "min-anchor" },
+) {
+  const alignEnd = options?.alignEnd === true;
+  const width = options?.width;
+  const dismissRef = useRef(onDismiss);
+  dismissRef.current = onDismiss;
+  useLayoutEffect(() => {
+    if (!open || !anchorRef.current || !menuRef.current) {
+      return;
+    }
+    const menu = menuRef.current;
+    const anchorRect = anchorRef.current.getBoundingClientRect();
+    if (width === "anchor") {
+      menu.style.width = `${anchorRect.width}px`;
+      menu.style.minWidth = `${anchorRect.width}px`;
+    } else if (width === "min-anchor") {
+      menu.style.minWidth = `${anchorRect.width}px`;
+    }
+    menu.showPopover();
+    const menuRect = menu.getBoundingClientRect();
+    const rightToLeft = getComputedStyle(anchorRef.current).direction === "rtl";
+    const alignRightEdge = alignEnd !== rightToLeft;
+    let left = alignRightEdge ? anchorRect.right - menuRect.width : anchorRect.left;
+    left = Math.max(8, Math.min(left, window.innerWidth - menuRect.width - 8));
+    let top = anchorRect.bottom + 6;
+    if (top + menuRect.height > window.innerHeight - 8 && anchorRect.top - menuRect.height - 6 >= 8) {
+      top = anchorRect.top - menuRect.height - 6;
+    }
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
+    const onScroll = (event: Event) => {
+      if (!(event.target instanceof Node) || !menu.contains(event.target)) {
+        dismissRef.current();
+      }
+    };
+    window.addEventListener("scroll", onScroll, true);
+    return () => window.removeEventListener("scroll", onScroll, true);
+  }, [open, anchorRef, menuRef, alignEnd, width]);
+}
+
+export function OthersMenu(props: {
+  children: ReactNode;
+  icon?: IconName;
+  title?: string;
+  className?: string;
+}) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   useDismiss(ref, open, () => setOpen(false));
+  useMenuPopover(ref, menuRef, open, () => setOpen(false), { alignEnd: true });
 
   return (
     <div className={cx("menu-anchor", props.className)} ref={ref}>
-      <IconButton active={open} title={t("Others")} onClick={() => setOpen(!open)}>
+      <IconButton active={open} title={props.title ?? t("Others")} onClick={() => setOpen(!open)}>
         <Icon name={props.icon ?? "more_vert"} />
       </IconButton>
       {open && (
-        <div className="menu align-right" onClick={() => setOpen(false)}>
+        <div ref={menuRef} popover="manual" className="menu popover-menu" onClick={() => setOpen(false)}>
           <SubMenuGroup>{props.children}</SubMenuGroup>
         </div>
       )}
@@ -656,17 +698,24 @@ export function MenuItem(props: {
   );
 }
 
+export function Switch(props: { value: boolean; onChange: (value: boolean) => void; disabled?: boolean; label?: string }) {
+  return (
+    <button
+      className={props.value ? "switch on" : "switch"}
+      role="switch"
+      aria-checked={props.value}
+      aria-label={props.label}
+      disabled={props.disabled}
+      onClick={() => props.onChange(!props.value)}
+    />
+  );
+}
+
 export function Toggle(props: { label: ReactNode; value: boolean; onChange: (value: boolean) => void; disabled?: boolean }) {
   return (
     <div className="toggle-line">
       <span>{props.label}</span>
-      <button
-        className={props.value ? "switch on" : "switch"}
-        role="switch"
-        aria-checked={props.value}
-        disabled={props.disabled}
-        onClick={() => props.onChange(!props.value)}
-      />
+      <Switch value={props.value} onChange={props.onChange} disabled={props.disabled} />
     </div>
   );
 }

@@ -355,6 +355,8 @@ export const TRANSLATIONS = {
   "Edit Content": { "zh-Hans": "编辑内容", "zh-Hant": "編輯內容", "fa": "ویرایش محتوا", "ru": "Изменить содержимое" },
   "View Content": { "zh-Hans": "查看内容", "zh-Hant": "查看內容", "fa": "مشاهده محتوا", "ru": "Просмотр содержимого" },
   "Format": { "zh-Hans": "格式化", "zh-Hant": "格式化", "fa": "قالب‌بندی", "ru": "Форматировать" },
+  "Undo": { "zh-Hans": "撤销", "zh-Hant": "撤銷", "fa": "واگرد", "ru": "Отменить" },
+  "Redo": { "zh-Hans": "重做", "zh-Hant": "重做", "fa": "انجام دوباره", "ru": "Повторить" },
   "Save File": { "zh-Hans": "保存文件", "zh-Hant": "保存文件", "fa": "ذخیره فایل", "ru": "Сохранить файл" },
   "Save Content JSON": { "zh-Hans": "保存内容 JSON", "zh-Hant": "保存內容 JSON", "fa": "ذخیره JSON محتوا", "ru": "Сохранить JSON содержимого" },
   "Share URL as QR Code": { "zh-Hans": "以二维码分享 URL", "zh-Hant": "以二維碼分享 URL", "fa": "اشتراک‌گذاری URL به‌صورت کد QR", "ru": "Поделиться URL как QR-кодом" },

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { formatRelativeTime } from "../api/format";
+import { describeError } from "../api/stream";
 import { navigate, useNow } from "../app/context";
 import type { DesktopHost, DesktopProfile, DesktopProfileType } from "../app/desktop";
 import { useDesktopProfiles } from "../app/desktop";
@@ -8,6 +9,7 @@ import { showError } from "../app/errorStore";
 import { useI18n } from "../app/i18n";
 import { Icon } from "../components/Icon";
 import type { IconName } from "../components/Icon";
+import { JsonEditor, type JsonEditorHandle } from "../components/JsonEditor";
 import {
   Button,
   Card,
@@ -19,6 +21,7 @@ import {
   QRCode,
   Select,
   SubMenu,
+  Switch,
   Toggle,
 } from "../components/ui";
 import { ProfileQRSDialog } from "./ProfileQRSDialog";
@@ -262,7 +265,18 @@ function ProfilePickerDialog(props: { host: DesktopHost; onClose: () => void }) 
 
   return (
     <Dialog onClose={props.onClose} className={styles.profilePickerDialog}>
-      <h3>{t("Profiles")}</h3>
+      <h3 className={styles.profilePickerHeader}>
+        {t("Profiles")}
+        {profiles.length > 0 && (
+          <IconButton
+            title={editing ? t("Done") : t("Edit")}
+            active={editing}
+            onClick={() => setEditing(!editing)}
+          >
+            <Icon name={editing ? "check" : "edit"} size={16} />
+          </IconButton>
+        )}
+      </h3>
       <div className={styles.profileList} ref={listRef}>
         {profiles.map((profile, index) => (
           <div
@@ -299,6 +313,7 @@ function ProfilePickerDialog(props: { host: DesktopHost; onClose: () => void }) 
             <div className={styles.profileRowActions}>
               {editing ? (
                 <IconButton
+                  danger
                   title={t("Delete")}
                   onClick={() => void host.profiles.remove(profile.id).catch(showError)}
                 >
@@ -333,13 +348,8 @@ function ProfilePickerDialog(props: { host: DesktopHost; onClose: () => void }) 
         ))}
       </div>
       <div className="row-actions dialog-actions">
-        {profiles.length > 0 && (
-          <Button onClick={() => setEditing(!editing)}>
-            {editing ? t("Done") : t("Edit")}
-          </Button>
-        )}
         <Button variant="primary" onClick={props.onClose}>
-          {t("Cancel")}
+          {t("Done")}
         </Button>
       </div>
     </Dialog>
@@ -562,6 +572,8 @@ function EditProfileDialog(props: {
   );
 }
 
+const EDITOR_SYMBOLS = ['"', ":", ",", "{", "}", "[", "]", "true", "false"];
+
 function ProfileContentDialog(props: {
   host: DesktopHost;
   profile: DesktopProfile;
@@ -573,9 +585,12 @@ function ProfileContentDialog(props: {
   const [content, setContent] = useState<string | null>(null);
   const [savedContent, setSavedContent] = useState<string | null>(null);
   const [checkError, setCheckError] = useState<string | null>(null);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
   const [confirmingClose, setConfirmingClose] = useState(false);
   const [busy, setBusy] = useState(false);
   const checkTimer = useRef<number | null>(null);
+  const editorRef = useRef<JsonEditorHandle>(null);
 
   useEffect(() => {
     host.profiles
@@ -596,17 +611,23 @@ function ProfileContentDialog(props: {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- load once per profile
   }, [props.profile.id]);
 
-  const edit = (value: string) => {
+  const edit = (value: string, undoAvailable: boolean, redoAvailable: boolean) => {
     setContent(value);
+    setCanUndo(undoAvailable);
+    setCanRedo(redoAvailable);
+    setCheckError(null);
     if (checkTimer.current !== null) {
       window.clearTimeout(checkTimer.current);
+    }
+    if (value.trim() === "") {
+      return;
     }
     checkTimer.current = window.setTimeout(() => {
       host.configuration.check(value).then(
         () => setCheckError(null),
-        (error: Error) => setCheckError(error.message),
+        (error: unknown) => setCheckError(describeError(error).message),
       );
-    }, 600);
+    }, 2000);
   };
 
   const format = () => {
@@ -617,10 +638,12 @@ function ProfileContentDialog(props: {
     host.configuration
       .format(content)
       .then((formatted) => {
-        setContent(formatted);
+        if (formatted !== content) {
+          editorRef.current?.replaceAll(formatted);
+        }
         setCheckError(null);
       })
-      .catch((error: Error) => setCheckError(error.message))
+      .catch((error: unknown) => setCheckError(describeError(error).message))
       .finally(() => setBusy(false));
   };
 
@@ -649,15 +672,71 @@ function ProfileContentDialog(props: {
   return (
     <Dialog onClose={requestClose} className={styles.profileEditorDialog}>
       <h3>{props.readOnly ? t("View Content") : t("Edit Content")}</h3>
-      <textarea
-        className={styles.profileEditor}
-        spellCheck={false}
-        readOnly={props.readOnly}
-        value={content ?? ""}
-        disabled={content === null}
-        onChange={(event) => edit(event.target.value)}
-      />
-      {checkError !== null && <div className="banner error">{checkError}</div>}
+      {savedContent === null ? (
+        <div className={styles.profileEditor} />
+      ) : (
+        <JsonEditor
+          ref={editorRef}
+          className={styles.profileEditor}
+          initialValue={savedContent}
+          readOnly={props.readOnly}
+          onChange={edit}
+          onSave={props.readOnly ? undefined : save}
+        />
+      )}
+      {checkError !== null && (
+        <div className={cx("banner error", styles.editorBanner)}>
+          <span className={styles.editorBannerMessage}>{checkError}</span>
+          <IconButton title={t("Close")} onClick={() => setCheckError(null)}>
+            <Icon name="close" size={14} />
+          </IconButton>
+        </div>
+      )}
+      {!props.readOnly && savedContent !== null && (
+        <div className={styles.editorToolbar} role="toolbar" aria-label={t("Edit Content")}>
+          <button
+            type="button"
+            className={styles.editorKey}
+            title={t("Undo")}
+            disabled={!canUndo}
+            onPointerDown={(event) => event.preventDefault()}
+            onClick={() => editorRef.current?.undo()}
+          >
+            <Icon name="undo" size={16} />
+          </button>
+          <button
+            type="button"
+            className={styles.editorKey}
+            title={t("Redo")}
+            disabled={!canRedo}
+            onPointerDown={(event) => event.preventDefault()}
+            onClick={() => editorRef.current?.redo()}
+          >
+            <Icon name="redo" size={16} />
+          </button>
+          <button
+            type="button"
+            className={styles.editorKey}
+            disabled={busy}
+            onPointerDown={(event) => event.preventDefault()}
+            onClick={format}
+          >
+            {t("Format")}
+          </button>
+          <span className={styles.editorToolbarDivider} aria-hidden="true" />
+          {EDITOR_SYMBOLS.map((symbol) => (
+            <button
+              key={symbol}
+              type="button"
+              className={cx(styles.editorKey, styles.editorSymbol)}
+              onPointerDown={(event) => event.preventDefault()}
+              onClick={() => editorRef.current?.insertSymbol(symbol)}
+            >
+              {symbol}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="row-actions dialog-actions">
         {props.readOnly ? (
           <>
@@ -675,9 +754,6 @@ function ProfileContentDialog(props: {
           </>
         ) : (
           <>
-            <Button disabled={busy || content === null} onClick={format}>
-              {t("Format")}
-            </Button>
             <Button onClick={requestClose}>
               {t("Cancel")}
             </Button>
@@ -755,22 +831,27 @@ export function SystemProxyCard(props: { host: DesktopHost }) {
   }
 
   return (
-    <Card icon="router" title={t("System HTTP Proxy")} wide>
-      <Toggle
-        label={t("Enabled")}
-        value={status.enabled}
-        disabled={busy}
-        onChange={(value) => {
-          setBusy(true);
-          host.systemProxy
-            .setEnabled(value)
-            .then(() => host.systemProxy.status())
-            .then(setStatus)
-            .catch(showError)
-            .finally(() => setBusy(false));
-        }}
-      />
-    </Card>
+    <Card
+      icon="router"
+      title={t("System HTTP Proxy")}
+      wide
+      actions={
+        <Switch
+          label={t("System HTTP Proxy")}
+          value={status.enabled}
+          disabled={busy}
+          onChange={(value) => {
+            setBusy(true);
+            host.systemProxy
+              .setEnabled(value)
+              .then(() => host.systemProxy.status())
+              .then(setStatus)
+              .catch(showError)
+              .finally(() => setBusy(false));
+          }}
+        />
+      }
+    />
   );
 }
 

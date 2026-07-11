@@ -186,6 +186,15 @@
   min-width: 180px;
 }
 
+.menu.popover-menu {
+  position: fixed;
+  inset: auto;
+  width: max-content;
+  min-width: 180px;
+  margin: 0;
+  overflow: visible;
+}
+
 a.menu-item {
   text-decoration: none;
 }
@@ -294,7 +303,11 @@ a.menu-item {
   margin-bottom: var(--space-10);
 }
 
-.card-header .icon {
+.card-header:last-child {
+  margin-bottom: 0;
+}
+
+.card-header > .icon {
   color: var(--text-faint);
 }
 
