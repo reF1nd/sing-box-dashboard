@@ -62,6 +62,13 @@ import {
 } from "./views/CrashReportsView";
 import { GroupsView } from "./views/GroupsView";
 import { LogsView } from "./views/LogsView";
+import {
+  OOMReportDetailView,
+  OOMReportFileView,
+  OOMReportListView,
+  oomReportFileDisplayName,
+  oomReportTitle,
+} from "./views/OOMReportsView";
 import { OverviewView } from "./views/OverviewView";
 import { ImportProfileFileDialog, ImportRemoteProfileDialog } from "./views/ProfileViews";
 import {
@@ -96,6 +103,9 @@ export type Route =
   | { page: "tools/crash-reports" }
   | { page: "tools/crash-reports/detail"; name: string; crashedAt: number | null }
   | { page: "tools/crash-reports/file"; name: string; file: string; crashedAt: number | null }
+  | { page: "tools/oom-reports" }
+  | { page: "tools/oom-reports/detail"; name: string; recordedAt: number | null }
+  | { page: "tools/oom-reports/file"; name: string; file: string; recordedAt: number | null }
   | { page: "settings" }
   | { page: "settings/app" }
   | { page: "settings/core" }
@@ -162,6 +172,22 @@ function routeFromHash(): Route {
           }
           return { page: "tools/crash-reports" };
         }
+        case "oom-reports": {
+          if (segments[2]) {
+            const atParam = query.get("at");
+            const recordedAt = atParam !== null && /^\d+$/.test(atParam) ? Number(atParam) : null;
+            if (segments[3]) {
+              return {
+                page: "tools/oom-reports/file",
+                name: segments[2],
+                file: segments[3],
+                recordedAt,
+              };
+            }
+            return { page: "tools/oom-reports/detail", name: segments[2], recordedAt };
+          }
+          return { page: "tools/oom-reports" };
+        }
         default:
           return { page: "tools" };
       }
@@ -199,6 +225,10 @@ function isStartedOnlyToolsSubpage(page: string): boolean {
   return page.startsWith("tools/tailscale") || page.startsWith("tools/usbip");
 }
 
+function isLocalReportsPage(page: string): boolean {
+  return page.startsWith("tools/crash-reports") || page.startsWith("tools/oom-reports");
+}
+
 function routeTitle(route: Route, t: Translate, language: string): string {
   switch (route.page) {
     case "overview":
@@ -227,6 +257,12 @@ function routeTitle(route: Route, t: Translate, language: string): string {
       return crashReportTitle(route.name, route.crashedAt, language);
     case "tools/crash-reports/file":
       return crashReportFileDisplayName(route.file, t);
+    case "tools/oom-reports":
+      return t("OOM Report");
+    case "tools/oom-reports/detail":
+      return oomReportTitle(route.name, route.recordedAt, language);
+    case "tools/oom-reports/file":
+      return oomReportFileDisplayName(route.file, t);
     case "settings":
       return t("Settings");
     case "settings/app":
@@ -560,10 +596,10 @@ function ShellContent(props: ShellProps & { onRetry: () => void }) {
       (route.page === "connections" && !started) ||
       (isStartedOnlyToolsSubpage(route.page) && !started) ||
       (route.page === "tools/usbip" && capabilities.ready && !capabilities.supports("usbip")) ||
-      (route.page.startsWith("tools/crash-reports") && localHost === null);
+      (isLocalReportsPage(route.page) && localHost === null);
     if (invisible) {
       navigate(
-        isStartedOnlyToolsSubpage(route.page) || route.page.startsWith("tools/crash-reports")
+        isStartedOnlyToolsSubpage(route.page) || isLocalReportsPage(route.page)
           ? "tools"
           : "overview",
       );
@@ -646,6 +682,13 @@ function ShellContent(props: ShellProps & { onRetry: () => void }) {
       )}
       {route.page === "tools/crash-reports/file" && (
         <CrashReportFileView name={route.name} file={route.file} crashedAt={route.crashedAt} />
+      )}
+      {route.page === "tools/oom-reports" && <OOMReportListView />}
+      {route.page === "tools/oom-reports/detail" && (
+        <OOMReportDetailView name={route.name} recordedAt={route.recordedAt} />
+      )}
+      {route.page === "tools/oom-reports/file" && (
+        <OOMReportFileView name={route.name} file={route.file} recordedAt={route.recordedAt} />
       )}
       {route.page === "settings" && <SettingsView />}
       {route.page === "settings/app" && (

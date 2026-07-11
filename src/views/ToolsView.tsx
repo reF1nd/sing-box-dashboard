@@ -58,18 +58,27 @@ export function ToolsView() {
 function DebugRows() {
   const host = useLocalDesktopHost();
   const { t } = useI18n();
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [crashUnreadCount, setCrashUnreadCount] = useState(0);
+  const [oomUnreadCount, setOOMUnreadCount] = useState(0);
 
   useEffect(() => {
     if (host === null) {
       return;
     }
     let stale = false;
-    host.reports
+    host.reports.crash
       .list()
       .then((reports) => {
         if (!stale) {
-          setUnreadCount(reports.filter((report) => !report.isRead).length);
+          setCrashUnreadCount(reports.filter((report) => !report.isRead).length);
+        }
+      })
+      .catch(() => {});
+    host.reports.oom
+      .list()
+      .then((reports) => {
+        if (!stale) {
+          setOOMUnreadCount(reports.filter((report) => !report.isRead).length);
         }
       })
       .catch(() => {});
@@ -88,8 +97,14 @@ function DebugRows() {
         <NavRow
           icon="bug_report"
           title={t("Crash Report")}
-          detail={unreadCount > 0 ? unreadCount : undefined}
+          detail={crashUnreadCount > 0 ? crashUnreadCount : undefined}
           onClick={() => navigate("tools/crash-reports")}
+        />
+        <NavRow
+          icon="memory"
+          title={t("OOM Report")}
+          detail={oomUnreadCount > 0 ? oomUnreadCount : undefined}
+          onClick={() => navigate("tools/oom-reports")}
         />
       </div>
     </div>
@@ -257,6 +272,10 @@ function AccuracyBadge(props: { accuracy: number }) {
 export function NetworkQualityView() {
   const api = useApi();
   const { t } = useI18n();
+  const host = useLocalDesktopHost();
+  const serviceStatus = useStream(api.serviceStatus);
+  const started = serviceStatus.data.status?.status === ServiceStatus_Type.STARTED;
+  const standalone = host !== null && !started;
   const [configURL, setConfigURL] = useState(NETWORK_QUALITY_DEFAULT_URL);
   const [outboundTag, setOutboundTag] = useState("");
   const [serial, setSerial] = useState(false);
@@ -265,19 +284,32 @@ export function NetworkQualityView() {
   const [progress, setProgress] = useState<NetworkQualityTestProgress | null>(null);
   const { running, error, reportError, start: startAction, stop } = useStreamingAction();
 
+  useEffect(() => {
+    if (standalone) {
+      setOutboundTag("");
+    }
+  }, [standalone]);
+
   const start = () =>
     startAction(async (signal) => {
       setProgress(null);
-      for await (const update of api.client.startNetworkQualityTest(
-        {
-          configURL,
-          outboundTag,
-          serial,
-          http3,
-          maxRuntimeSeconds: maxRuntime,
-        },
-        { signal },
-      )) {
+      const updates =
+        host !== null && !started
+          ? host.tools.startStandaloneNetworkQualityTest(
+              { configURL, serial, http3, maxRuntimeSeconds: maxRuntime },
+              { signal },
+            )
+          : api.client.startNetworkQualityTest(
+              {
+                configURL,
+                outboundTag,
+                serial,
+                http3,
+                maxRuntimeSeconds: maxRuntime,
+              },
+              { signal },
+            );
+      for await (const update of updates) {
         setProgress(update);
         if (update.error !== "") {
           reportError(update.error);
@@ -301,7 +333,9 @@ export function NetworkQualityView() {
               disabled={running}
             />
           </Field>
-          <OutboundPicker value={outboundTag} onChange={setOutboundTag} disabled={running} />
+          {!standalone && (
+            <OutboundPicker value={outboundTag} onChange={setOutboundTag} disabled={running} />
+          )}
           <Field label={t("Max runtime")}>
             <Select
               options={[20, 30, 60].map((count) => ({
@@ -414,15 +448,29 @@ function ResultValue(props: { pending: boolean; value: string; badge: React.Reac
 export function STUNTestView() {
   const api = useApi();
   const { t } = useI18n();
+  const host = useLocalDesktopHost();
+  const serviceStatus = useStream(api.serviceStatus);
+  const started = serviceStatus.data.status?.status === ServiceStatus_Type.STARTED;
+  const standalone = host !== null && !started;
   const [server, setServer] = useState(STUN_DEFAULT_SERVER);
   const [outboundTag, setOutboundTag] = useState("");
   const [progress, setProgress] = useState<STUNTestProgress | null>(null);
   const { running, error, reportError, start: startAction, stop } = useStreamingAction();
 
+  useEffect(() => {
+    if (standalone) {
+      setOutboundTag("");
+    }
+  }, [standalone]);
+
   const start = () =>
     startAction(async (signal) => {
       setProgress(null);
-      for await (const update of api.client.startSTUNTest({ server, outboundTag }, { signal })) {
+      const updates =
+        host !== null && !started
+          ? host.tools.startStandaloneSTUNTest({ server }, { signal })
+          : api.client.startSTUNTest({ server, outboundTag }, { signal });
+      for await (const update of updates) {
         setProgress(update);
         if (update.error !== "") {
           reportError(update.error);
@@ -443,7 +491,9 @@ export function STUNTestView() {
               disabled={running}
             />
           </Field>
-          <OutboundPicker value={outboundTag} onChange={setOutboundTag} disabled={running} />
+          {!standalone && (
+            <OutboundPicker value={outboundTag} onChange={setOutboundTag} disabled={running} />
+          )}
           <div className="row-actions" style={{ marginTop: 10 }}>
             {running ? (
               <Button variant="danger" onClick={stop}>

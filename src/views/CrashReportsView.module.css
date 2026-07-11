@@ -49,6 +49,10 @@
   padding: var(--space-8) var(--space-4) 0;
 }
 
+.static-row {
+  cursor: default;
+}
+
 .share-section {
   display: grid;
   gap: var(--space-4);

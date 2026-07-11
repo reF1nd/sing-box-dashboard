@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { Code, Transport } from "@connectrpc/connect";
 
 import { isTerminalCode, type StreamPhase, type StreamSnapshot } from "../api/stream";
+import type { NetworkQualityTestProgress, STUNTestProgress } from "../gen/daemon/started_service_pb";
 import { showError } from "./errorStore";
 
 export type DaemonConnectionPhase =
@@ -63,6 +64,19 @@ export interface DesktopCrashReport {
 export interface DesktopCrashReportFile {
   name: string;
   content: string;
+  isBinary: boolean;
+}
+
+export interface DesktopOOMReport {
+  name: string;
+  recordedAt: number;
+  isRead: boolean;
+}
+
+export interface DesktopOOMReportFile {
+  name: string;
+  content: string;
+  isProfile: boolean;
 }
 
 export interface DesktopCrashReportExportOptions {
@@ -76,6 +90,9 @@ export type DesktopSpeedMode = "disabled" | "enabled" | "unified";
 export interface DesktopSettingsState {
   speedMode: DesktopSpeedMode;
   openAtLogin: boolean;
+  oomKillerEnabled: boolean;
+  oomMemoryLimitMB: number;
+  oomKillerKillConnections: boolean;
 }
 
 export interface DesktopHost {
@@ -100,6 +117,16 @@ export interface DesktopHost {
     check(content: string): Promise<void>;
     format(content: string): Promise<string>;
   };
+  tools: {
+    startStandaloneNetworkQualityTest(
+      request: { configURL: string; serial: boolean; http3: boolean; maxRuntimeSeconds: number },
+      options: { signal: AbortSignal },
+    ): AsyncIterable<NetworkQualityTestProgress>;
+    startStandaloneSTUNTest(
+      request: { server: string },
+      options: { signal: AbortSignal },
+    ): AsyncIterable<STUNTestProgress>;
+  };
   systemProxy: {
     status(): Promise<{ available: boolean; enabled: boolean }>;
     setEnabled(enabled: boolean): Promise<void>;
@@ -111,12 +138,25 @@ export interface DesktopHost {
     destroyWorkingDirectory(): Promise<void>;
   };
   reports: {
-    list(): Promise<DesktopCrashReport[]>;
-    read(name: string): Promise<DesktopCrashReportFile[]>;
-    markRead(name: string): Promise<void>;
-    exportFile(name: string, options: DesktopCrashReportExportOptions): Promise<boolean>;
-    remove(name: string): Promise<void>;
-    removeAll(): Promise<void>;
+    crash: {
+      list(): Promise<DesktopCrashReport[]>;
+      read(name: string): Promise<DesktopCrashReportFile[]>;
+      markRead(name: string): Promise<void>;
+      exportFile(name: string, options: DesktopCrashReportExportOptions): Promise<boolean>;
+      remove(name: string): Promise<void>;
+      removeAll(): Promise<void>;
+    };
+    oom: {
+      list(): Promise<DesktopOOMReport[]>;
+      read(name: string): Promise<DesktopOOMReportFile[]>;
+      markRead(name: string): Promise<void>;
+      exportFile(name: string, options: DesktopCrashReportExportOptions): Promise<boolean>;
+      remove(name: string): Promise<void>;
+      removeAll(): Promise<void>;
+    };
+    triggerDebugCrash(type: "go" | "native"): Promise<void>;
+    triggerAppCrash(type: "js" | "native"): Promise<void>;
+    triggerOOMReport(): Promise<void>;
   };
   profiles: {
     list(): Promise<DesktopProfilesState>;
@@ -140,6 +180,9 @@ export interface DesktopHost {
     get(): Promise<DesktopSettingsState>;
     setSpeedMode(mode: DesktopSpeedMode): Promise<void>;
     setOpenAtLogin(value: boolean): Promise<void>;
+    setOOMKillerEnabled(value: boolean): Promise<void>;
+    setOOMMemoryLimitMB(value: number): Promise<void>;
+    setOOMKillerKillConnections(value: boolean): Promise<void>;
     cacheSize(): Promise<number>;
     clearCache(): Promise<void>;
   };

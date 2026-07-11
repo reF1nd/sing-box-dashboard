@@ -5,6 +5,7 @@ import { navigate } from "../app/context";
 import {
   useLocalDesktopHost,
   type DesktopCrashReport,
+  type DesktopCrashReportExportOptions,
   type DesktopCrashReportFile,
   type DesktopHost,
 } from "../app/desktop";
@@ -21,6 +22,7 @@ import {
   EmptyState,
   IconButton,
   MenuItem,
+  MenuLabel,
   OthersMenu,
   Spinner,
   Toggle,
@@ -71,7 +73,7 @@ function CrashReportListContent({ host }: { host: DesktopHost }) {
   const [reports, setReports] = useState<DesktopCrashReport[] | null>(null);
 
   const reload = useCallback(() => {
-    host.reports
+    host.reports.crash
       .list()
       .then(setReports)
       .catch((error) => {
@@ -85,7 +87,7 @@ function CrashReportListContent({ host }: { host: DesktopHost }) {
   }, [reload]);
 
   const deleteAll = () => {
-    host.reports
+    host.reports.crash
       .removeAll()
       .then(reload)
       .catch(showError);
@@ -96,13 +98,16 @@ function CrashReportListContent({ host }: { host: DesktopHost }) {
       <ToolsPageHeader
         title={t("Crash Report")}
         actions={
-          reports !== null && reports.length > 0 ? (
-            <OthersMenu>
-              <MenuItem danger icon="delete" onSelect={deleteAll}>
-                {t("Delete All")}
-              </MenuItem>
-            </OthersMenu>
-          ) : undefined
+          <>
+            {import.meta.env.DEV && <CrashTriggerMenu host={host} />}
+            {reports !== null && reports.length > 0 && (
+              <OthersMenu>
+                <MenuItem danger icon="delete" onSelect={deleteAll}>
+                  {t("Delete All")}
+                </MenuItem>
+              </OthersMenu>
+            )}
+          </>
         }
       />
       <div className="settings-stack">
@@ -146,6 +151,25 @@ function CrashReportListContent({ host }: { host: DesktopHost }) {
   );
 }
 
+function CrashTriggerMenu({ host }: { host: DesktopHost }) {
+  const triggerApp = (type: "js" | "native") => {
+    host.reports.triggerAppCrash(type).catch(showError);
+  };
+  const triggerDaemon = (type: "go" | "native") => {
+    host.reports.triggerDebugCrash(type).catch(showError);
+  };
+  return (
+    <OthersMenu icon="bug_report" title="Crash Trigger">
+      <MenuLabel>Application</MenuLabel>
+      <MenuItem onSelect={() => triggerApp("js")}>JS Crash</MenuItem>
+      <MenuItem onSelect={() => triggerApp("native")}>Native Crash</MenuItem>
+      <MenuLabel>Daemon</MenuLabel>
+      <MenuItem onSelect={() => triggerDaemon("go")}>Go Crash</MenuItem>
+      <MenuItem onSelect={() => triggerDaemon("native")}>Native Crash</MenuItem>
+    </OthersMenu>
+  );
+}
+
 export function CrashReportDetailView(props: { name: string; crashedAt: number | null }) {
   const host = useLocalDesktopHost();
   if (host === null) {
@@ -169,13 +193,13 @@ function CrashReportDetailContent({
 
   useEffect(() => {
     let stale = false;
-    host.reports
+    host.reports.crash
       .read(name)
       .then((value) => {
         if (!stale) {
           setFiles(value);
         }
-        host.reports.markRead(name).catch(showError);
+        host.reports.crash.markRead(name).catch(showError);
       })
       .catch((error) => {
         showError(error);
@@ -189,7 +213,7 @@ function CrashReportDetailContent({
   }, [host, name]);
 
   const remove = () => {
-    host.reports
+    host.reports.crash
       .remove(name)
       .then(() => navigate("tools/crash-reports"))
       .catch(showError);
@@ -222,57 +246,73 @@ function CrashReportDetailContent({
           <div>
             <div className="list-section-title">{t("Files")}</div>
             <div className="nav-list">
-              {files.map((file) => (
-                <button
-                  key={file.name}
-                  className="nav-row"
-                  onClick={() => navigate(reportFilePath(name, file.name, crashedAt))}
-                >
-                  <span>{crashReportFileDisplayName(file.name, t)}</span>
-                  <Icon name="keyboard_arrow_right" size={14} />
-                </button>
-              ))}
+              {files.map((file) =>
+                file.isBinary ? (
+                  <div key={file.name} className={cx("nav-row", styles.staticRow)}>
+                    <span>{crashReportFileDisplayName(file.name, t)}</span>
+                  </div>
+                ) : (
+                  <button
+                    key={file.name}
+                    className="nav-row"
+                    onClick={() => navigate(reportFilePath(name, file.name, crashedAt))}
+                  >
+                    <span>{crashReportFileDisplayName(file.name, t)}</span>
+                    <Icon name="keyboard_arrow_right" size={14} />
+                  </button>
+                ),
+              )}
             </div>
           </div>
         )}
       </div>
       {sharing && files !== null && (
-        <ShareReportDialog host={host} name={name} files={files} onClose={() => setSharing(false)} />
+        <ReportShareDialog
+          hasConfiguration={files.some((file) => file.name === "configuration.json")}
+          hasLog={false}
+          onSave={(options) => {
+            host.reports.crash.exportFile(name, options).catch(showError);
+          }}
+          onClose={() => setSharing(false)}
+        />
       )}
     </div>
   );
 }
 
-function ShareReportDialog(props: {
-  host: DesktopHost;
-  name: string;
-  files: DesktopCrashReportFile[];
+export function ReportShareDialog(props: {
+  hasConfiguration: boolean;
+  hasLog: boolean;
+  onSave: (options: DesktopCrashReportExportOptions) => void;
   onClose: () => void;
 }) {
   const { t } = useI18n();
-  const hasConfiguration = props.files.some((file) => file.name === "configuration.json");
   const [withConfiguration, setWithConfiguration] = useState(false);
+  const [withLog, setWithLog] = useState(true);
   const [encrypt, setEncrypt] = useState(false);
 
   const save = () => {
     props.onClose();
-    props.host.reports
-      .exportFile(props.name, { withConfiguration, withLog: true, encrypt })
-      .catch(showError);
+    props.onSave({ withConfiguration, withLog: props.hasLog ? withLog : true, encrypt });
   };
 
   return (
     <Dialog onClose={props.onClose}>
       <h3>{t("Share")}</h3>
-      {hasConfiguration && (
+      {(props.hasConfiguration || props.hasLog) && (
         <div className={styles.shareSection}>
-          <Toggle
-            label={t("With Configuration")}
-            value={withConfiguration}
-            onChange={setWithConfiguration}
-          />
+          {props.hasLog && <Toggle label={t("With Log")} value={withLog} onChange={setWithLog} />}
+          {props.hasConfiguration && (
+            <Toggle
+              label={t("With Configuration")}
+              value={withConfiguration}
+              onChange={setWithConfiguration}
+            />
+          )}
           <div className="hint">
-            {t("Configuration files may contain private content and should not be made public.")}
+            {props.hasLog
+              ? t("Logs and configuration files may contain private content and should not be made public.")
+              : t("Configuration files may contain private content and should not be made public.")}
           </div>
         </div>
       )}
@@ -344,7 +384,7 @@ function CrashReportFileContent({
 
   useEffect(() => {
     let stale = false;
-    host.reports
+    host.reports.crash
       .read(name)
       .then((files) => {
         if (!stale) {
@@ -386,7 +426,7 @@ function CrashReportFileContent({
   );
 }
 
-function MetadataCard(props: { content: string }) {
+export function MetadataCard(props: { content: string }) {
   const { t } = useI18n();
   let entries: [string, string][] = [];
   try {
