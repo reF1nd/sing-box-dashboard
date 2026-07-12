@@ -105,13 +105,6 @@ export function SettingsView() {
                 ) : undefined
               }
             />
-            {host !== null && (
-              <NavRow
-                icon="favorite"
-                title={t("Sponsors")}
-                onClick={() => navigate("settings/sponsors")}
-              />
-            )}
           </div>
         </div>
       </div>
@@ -309,31 +302,6 @@ function SettingsPageHeader(props: {
       actions={props.action}
       back={{ label: props.backLabel ?? t("Settings"), onClick: () => navigate(back) }}
     />
-  );
-}
-
-export function SponsorsView() {
-  const host = useDesktopHost();
-  const { t } = useI18n();
-  if (host === null) {
-    return null;
-  }
-  return (
-    <div className="page">
-      <SettingsPageHeader title={t("Sponsors")} />
-      <div className="settings-stack">
-        <div className={cx("hint", styles.sponsorsPlea)}>
-          <strong>{t("If I’ve defended your modern life, please consider sponsoring me.")}</strong>
-        </div>
-        <div className="nav-list">
-          <NavRow
-            title={t("GitHub Sponsors (recommended)")}
-            href="https://github.com/sponsors/nekohasekai"
-          />
-          <NavRow title={t("Other methods")} href="https://sekai.icu/sponsors/" />
-        </div>
-      </div>
-    </div>
   );
 }
 

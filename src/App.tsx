@@ -70,7 +70,6 @@ import {
   PreferencesView,
   ServersView,
   SettingsView,
-  SponsorsView,
   TerminalConfigurationView,
   TerminalThemeEditorView,
   TerminalThemePickerView,
@@ -104,8 +103,7 @@ export type Route =
   | { page: "settings/preferences/terminal" }
   | { page: "settings/preferences/terminal/theme"; scheme: "light" | "dark" }
   | { page: "settings/preferences/terminal/custom"; scheme: "light" | "dark" }
-  | { page: "settings/servers" }
-  | { page: "settings/sponsors" };
+  | { page: "settings/servers" };
 
 function decodeSegment(segment: string): string {
   try {
@@ -186,8 +184,6 @@ function routeFromHash(): Route {
           return { page: "settings/preferences" };
         case "servers":
           return { page: "settings/servers" };
-        case "sponsors":
-          return { page: "settings/sponsors" };
         default:
           return { page: "settings" };
       }
@@ -247,8 +243,6 @@ function routeTitle(route: Route, t: Translate, language: string): string {
       return t("Custom theme");
     case "settings/servers":
       return t("Remote Control");
-    case "settings/sponsors":
-      return t("Sponsors");
   }
 }
 
@@ -681,7 +675,6 @@ function ShellContent(props: ShellProps & { onRetry: () => void }) {
       {route.page === "settings/servers" && (
         <ServersView serversState={props.serversState} onServersChange={props.onServersChange} />
       )}
-      {route.page === "settings/sponsors" && <SponsorsView />}
     </main>
   );
 

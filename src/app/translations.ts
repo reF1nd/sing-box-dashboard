@@ -26,10 +26,6 @@ export const TRANSLATIONS = {
   "Documentation": { "zh-Hans": "文档", "zh-Hant": "文檔", "fa": "مستندات", "ru": "Документация" },
   "Changelog": { "zh-Hans": "更新日志", "zh-Hant": "更新日誌", "fa": "گزارش تغییرات", "ru": "Журнал изменений" },
   "Releases": { "zh-Hans": "Releases", "zh-Hant": "Releases", "fa": "Releases", "ru": "Releases" },
-  "Sponsors": { "zh-Hans": "赞助", "zh-Hant": "贊助", "fa": "حمایت مالی", "ru": "Спонсорство" },
-  "If I’ve defended your modern life, please consider sponsoring me.": { "zh-Hans": "支持我的工作", "zh-Hant": "支持我的工作", "fa": "از کار من حمایت کنید", "ru": "Поддержите мою работу" },
-  "GitHub Sponsors (recommended)": { "zh-Hans": "通过 Github Sponsors (推荐)", "zh-Hant": "通過 Github Sponsors (推薦)", "fa": "از طریق GitHub Sponsors (پیشنهادی)", "ru": "Через GitHub Sponsors (рекомендуется)" },
-  "Other methods": { "zh-Hans": "其他方式", "zh-Hant": "其他方式", "fa": "روش‌های دیگر", "ru": "Другие способы" },
 
   "Name": { "zh-Hans": "名称", "zh-Hant": "名稱", "fa": "نام", "ru": "Имя" },
   "URL": { "zh-Hans": "URL", "zh-Hant": "URL", "fa": "URL", "ru": "URL" },
