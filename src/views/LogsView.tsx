@@ -8,6 +8,7 @@ import { showError } from "../app/errorStore";
 import { useStreamOutage } from "../app/hooks";
 import { useI18n } from "../app/i18n";
 import { Icon } from "../components/Icon";
+import { PageHeader } from "../components/PageHeader";
 import { StreamErrorBanner } from "../components/StreamBanner";
 import { EmptyState, IconButton, MenuItem, OthersMenu, SearchInput, Spinner, SubMenu } from "../components/ui";
 import { LogLevel, ServiceStatus_Type } from "../gen/daemon/started_service_pb";
@@ -162,57 +163,59 @@ export function LogsView() {
 
   return (
     <div className="page page-full">
-      <div className="page-header">
-        <h1 className="page-title">{t("Logs")}</h1>
-        <div className="actions">
-          <IconButton
-            active={paused}
-            title={paused ? t("Resume scrolling") : t("Pause scrolling")}
-            onClick={togglePause}
-          >
-            <Icon name={paused ? "play_arrow" : "pause"} />
-          </IconButton>
-          <OthersMenu>
-            <SubMenu label={t("Log Level")} icon="filter_list">
-              <MenuItem checked={level === null} onSelect={() => setLevel(null)}>
-                {t("Default")}
-              </MenuItem>
-              {LEVEL_OPTIONS.map((option) => (
-                <MenuItem
-                  key={option.value}
-                  checked={level === option.value}
-                  onSelect={() => setLevel(option.value)}
-                >
-                  {option.label}
-                </MenuItem>
-              ))}
-            </SubMenu>
-            <SubMenu label={t("Save")} icon="save">
-              <MenuItem icon="content_copy" onSelect={copyLogs}>
-                {t("To Clipboard")}
-              </MenuItem>
-              <MenuItem icon="save" onSelect={saveLogs}>
-                {t("To File")}
-              </MenuItem>
-              {canShare && (
-                <MenuItem icon="share" onSelect={shareLogs}>
-                  {t("Share")}
-                </MenuItem>
-              )}
-            </SubMenu>
-            <div className="menu-divider" />
-            <MenuItem
-              danger
-              icon="delete"
-              onSelect={() => {
-                void api.clearLogs().catch(showError);
-              }}
+      <PageHeader
+        title={t("Logs")}
+        actions={
+          <>
+            <IconButton
+              active={paused}
+              title={paused ? t("Resume scrolling") : t("Pause scrolling")}
+              onClick={togglePause}
             >
-              {t("Clear Logs")}
-            </MenuItem>
-          </OthersMenu>
-        </div>
-      </div>
+              <Icon name={paused ? "play_arrow" : "pause"} />
+            </IconButton>
+            <OthersMenu>
+              <SubMenu label={t("Log Level")} icon="filter_list">
+                <MenuItem checked={level === null} onSelect={() => setLevel(null)}>
+                  {t("Default")}
+                </MenuItem>
+                {LEVEL_OPTIONS.map((option) => (
+                  <MenuItem
+                    key={option.value}
+                    checked={level === option.value}
+                    onSelect={() => setLevel(option.value)}
+                  >
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </SubMenu>
+              <SubMenu label={t("Save")} icon="save">
+                <MenuItem icon="content_copy" onSelect={copyLogs}>
+                  {t("To Clipboard")}
+                </MenuItem>
+                <MenuItem icon="save" onSelect={saveLogs}>
+                  {t("To File")}
+                </MenuItem>
+                {canShare && (
+                  <MenuItem icon="share" onSelect={shareLogs}>
+                    {t("Share")}
+                  </MenuItem>
+                )}
+              </SubMenu>
+              <div className="menu-divider" />
+              <MenuItem
+                danger
+                icon="delete"
+                onSelect={() => {
+                  void api.clearLogs().catch(showError);
+                }}
+              >
+                {t("Clear Logs")}
+              </MenuItem>
+            </OthersMenu>
+          </>
+        }
+      />
       <div className="field">
         <SearchInput value={search} onChange={setSearch} />
       </div>

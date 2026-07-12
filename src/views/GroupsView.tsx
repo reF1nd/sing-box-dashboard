@@ -7,6 +7,7 @@ import { showError } from "../app/errorStore";
 import { usePendingValue } from "../app/hooks";
 import { useI18n } from "../app/i18n";
 import { Icon } from "../components/Icon";
+import { PageHeader } from "../components/PageHeader";
 import { StreamStates } from "../components/StreamBanner";
 import { Badge, Card, IconButton, Spinner } from "../components/ui";
 import type { Group, GroupItem } from "../gen/daemon/started_service_pb";
@@ -20,9 +21,7 @@ export function GroupsView() {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1 className="page-title">{t("Groups")}</h1>
-      </div>
+      <PageHeader title={t("Groups")} />
       <StreamStates
         snapshot={groups}
         loaded={groups.data.loaded}

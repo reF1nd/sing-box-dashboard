@@ -1,0 +1,80 @@
+.toolbar {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-10);
+  align-items: center;
+  justify-content: space-between;
+  height: 46px;
+  padding: 0 var(--space-12);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  -webkit-app-region: drag;
+}
+
+/* Insets clearing the macOS traffic lights (hiddenInset) and the Windows
+   caption controls (titleBarOverlay). */
+:global(body[data-platform="darwin"]) .toolbar-window {
+  --titlebar-inset: 84px;
+
+  padding-inline-start: var(--titlebar-inset);
+}
+
+:global(body[data-platform="win32"]) .toolbar {
+  --window-controls-inset: 150px;
+
+  padding-inline-end: var(--window-controls-inset);
+}
+
+.toolbar :global(button),
+.toolbar :global(.select) {
+  -webkit-app-region: no-drag;
+}
+
+.toolbar-section {
+  display: flex;
+  gap: var(--space-10);
+  align-items: center;
+  min-width: 0;
+}
+
+.toolbar-end {
+  justify-content: flex-end;
+}
+
+.toolbar-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.toolbar-lead {
+  display: flex;
+  align-items: center;
+}
+
+.toolbar-lead:empty {
+  display: none;
+}
+
+.toolbar-server :global(.select) {
+  width: 180px;
+}
+
+.toolbar-service {
+  display: flex;
+  gap: var(--space-8);
+  align-items: center;
+}
+
+.toolbar-spinner {
+  display: inline-flex;
+  padding: 0 var(--space-6);
+}
+
+.toolbar-uptime {
+  composes: text-mono-caption from global;
+  color: var(--text-secondary);
+}

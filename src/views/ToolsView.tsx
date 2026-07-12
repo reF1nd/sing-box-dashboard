@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import {
   formatBitrate,
@@ -11,9 +11,11 @@ import {
 import { useStream } from "../api/stream";
 import { useSupportsCapability } from "../app/capabilities";
 import { navigate, useApi } from "../app/context";
+import { useLocalDesktopHost } from "../app/desktop";
 import { useStreamingAction } from "../app/hooks";
 import { useI18n } from "../app/i18n";
 import { Icon } from "../components/Icon";
+import { PageHeader } from "../components/PageHeader";
 import { Badge, Button, Card, DataLine, Dialog, Field, NavRow, Select, Spinner, Toggle } from "../components/ui";
 import {
   ServiceStatus_Type,
@@ -32,9 +34,7 @@ export function ToolsView() {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1 className="page-title">{t("Tools")}</h1>
-      </div>
+      <PageHeader title={t("Tools")} />
       <div className="settings-stack">
         {started && <TailscaleEndpointRows />}
         {started && <UsbipServerRows />}
@@ -49,6 +49,48 @@ export function ToolsView() {
             <NavRow icon="swap_horiz" title={t("STUN Test")} onClick={() => navigate("tools/stun")} />
           </div>
         </div>
+        <DebugRows />
+      </div>
+    </div>
+  );
+}
+
+function DebugRows() {
+  const host = useLocalDesktopHost();
+  const { t } = useI18n();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (host === null) {
+      return;
+    }
+    let stale = false;
+    host.reports
+      .list()
+      .then((reports) => {
+        if (!stale) {
+          setUnreadCount(reports.filter((report) => !report.isRead).length);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      stale = true;
+    };
+  }, [host]);
+
+  if (host === null) {
+    return null;
+  }
+  return (
+    <div>
+      <div className="list-section-title">{t("Debug")}</div>
+      <div className="nav-list">
+        <NavRow
+          icon="bug_report"
+          title={t("Crash Report")}
+          detail={unreadCount > 0 ? unreadCount : undefined}
+          onClick={() => navigate("tools/crash-reports")}
+        />
       </div>
     </div>
   );
@@ -116,13 +158,11 @@ function UsbipServerRows() {
 export function ToolsPageHeader(props: { title: string; actions?: ReactNode }) {
   const { t } = useI18n();
   return (
-    <div className="page-header">
-      <button className="back-button" aria-label={t("Tools")} onClick={() => navigate("tools")}>
-        <Icon name="arrow_back" size={20} />
-      </button>
-      <h1 className="page-title">{props.title}</h1>
-      {props.actions && <div className="actions">{props.actions}</div>}
-    </div>
+    <PageHeader
+      title={props.title}
+      actions={props.actions}
+      back={{ label: t("Tools"), onClick: () => navigate("tools") }}
+    />
   );
 }
 

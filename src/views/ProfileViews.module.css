@@ -1,0 +1,146 @@
+.profile-empty {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--text-faint);
+}
+
+.profile-selector {
+  display: flex;
+  gap: var(--space-8);
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-8) var(--space-10);
+  font-size: var(--text-base);
+  color: var(--text);
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+}
+
+.profile-selector-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-meta {
+  display: flex;
+  gap: var(--space-10);
+  margin-top: var(--space-8);
+}
+
+.profile-info {
+  display: inline-flex;
+  gap: var(--space-10);
+  align-items: center;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.profile-info-item {
+  display: inline-flex;
+  gap: var(--space-4);
+  align-items: center;
+}
+
+.profile-actions {
+  margin-top: var(--space-10);
+}
+
+.profile-picker-dialog {
+  width: min(480px, 90vw);
+}
+
+.profile-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.profile-row {
+  display: flex;
+  gap: var(--space-8);
+  align-items: center;
+  padding: var(--space-4) var(--space-6);
+  border-radius: var(--radius-control);
+}
+
+.profile-row.dragging {
+  background: var(--hover);
+}
+
+.drag-handle {
+  display: inline-flex;
+  color: var(--text-faint);
+  touch-action: none;
+  cursor: grab;
+}
+
+.profile-check {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 16px;
+  color: var(--accent);
+}
+
+.profile-row-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+  min-width: 0;
+  padding: var(--space-4) 0;
+  color: var(--text);
+  text-align: start;
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+.profile-row-main:disabled {
+  cursor: default;
+}
+
+.profile-row-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-base);
+  white-space: nowrap;
+}
+
+.profile-row-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-4);
+  align-items: center;
+}
+
+.profile-editor-dialog {
+  width: min(720px, 90vw);
+}
+
+.profile-editor {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 50vh;
+  padding: var(--space-10);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text);
+  resize: vertical;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.spin {
+  display: inline-flex;
+  animation: spin 1s linear infinite;
+}

@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type KeyboardEvent, type MouseEventHandler, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { encode as encodeQR } from "uqr";
 
 import type { DelayTone } from "../api/format";
@@ -78,11 +79,11 @@ export function Spinner(props: { className?: string }) {
   return <span className={cx("spinner", props.className)} />;
 }
 
-export function Brand(props: { className?: string }) {
+export function Brand(props: { className?: string; product?: string }) {
   return (
     <div className={cx("setup-brand", props.className)}>
       sing-box
-      <small>dashboard</small>
+      <small>{props.product ?? "dashboard"}</small>
     </div>
   );
 }
@@ -160,16 +161,45 @@ export function EmptyState(props: { icon?: IconName; className?: string; childre
   );
 }
 
+export function useContextMenu(menu: ReactNode) {
+  const [point, setPoint] = useState<{ x: number; y: number } | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useDismiss(menuRef, point !== null, () => setPoint(null));
+  const onContextMenu: MouseEventHandler<HTMLElement> = (event) => {
+    event.preventDefault();
+    setPoint({ x: event.clientX, y: event.clientY });
+  };
+  const element =
+    point !== null
+      ? createPortal(
+          <div
+            ref={menuRef}
+            className="menu context-menu"
+            style={{ left: point.x, top: point.y }}
+            onClick={() => setPoint(null)}
+          >
+            {menu}
+          </div>,
+          document.body,
+        )
+      : null;
+  return { onContextMenu, element };
+}
+
 export function NavRow(props: {
-  icon: IconName;
+  icon?: IconName;
   title: string;
   detail?: ReactNode;
   onClick?: () => void;
   href?: string;
+  contextMenu?: ReactNode;
 }) {
+  const contextMenu = useContextMenu(props.contextMenu);
+  const onContextMenu = props.contextMenu != null ? contextMenu.onContextMenu : undefined;
+  const menu = contextMenu.element;
   const inner = (
     <>
-      <Icon name={props.icon} size={15} />
+      {props.icon && <Icon name={props.icon} size={15} />}
       <span>{props.title}</span>
       {props.detail != null && <span className="nav-row-detail">{props.detail}</span>}
       <Icon name={props.href ? "open_in_new" : "keyboard_arrow_right"} size={14} />
@@ -177,15 +207,36 @@ export function NavRow(props: {
   );
   if (props.href) {
     return (
-      <a className="nav-row" href={props.href} target="_blank" rel="noreferrer">
-        {inner}
-      </a>
+      <>
+        <a
+          className="nav-row"
+          href={props.href}
+          target="_blank"
+          rel="noreferrer"
+          onContextMenu={onContextMenu}
+        >
+          {inner}
+        </a>
+        {menu}
+      </>
     );
   }
   return (
-    <button className="nav-row" onClick={props.onClick}>
-      {inner}
-    </button>
+    <>
+      <button className="nav-row" onClick={props.onClick} onContextMenu={onContextMenu}>
+        {inner}
+      </button>
+      {menu}
+    </>
+  );
+}
+
+export function MenuLink(props: { href: string; children: ReactNode }) {
+  return (
+    <a className="menu-item" href={props.href} target="_blank" rel="noreferrer">
+      <span className="menu-check" />
+      {props.children}
+    </a>
   );
 }
 
@@ -640,6 +691,36 @@ export function SearchInput(props: { value: string; onChange: (value: string) =>
         value={props.value}
         onChange={(event) => props.onChange(event.target.value)}
       />
+    </div>
+  );
+}
+
+export function SecretInput(props: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+}) {
+  const { t } = useI18n();
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className="secret-input">
+      <input
+        className="input"
+        type={visible ? "text" : "password"}
+        autoComplete="new-password"
+        value={props.value}
+        placeholder={props.placeholder}
+        disabled={props.disabled}
+        onChange={(event) => props.onChange(event.target.value)}
+      />
+      <IconButton
+        title={visible ? t("Hide secret") : t("Show secret")}
+        disabled={props.disabled}
+        onClick={() => setVisible(!visible)}
+      >
+        <Icon name={visible ? "visibility_off" : "visibility"} size={14} />
+      </IconButton>
     </div>
   );
 }

@@ -179,6 +179,17 @@
   min-width: 180px;
 }
 
+.menu.context-menu {
+  position: fixed;
+  inset: auto;
+  width: max-content;
+  min-width: 180px;
+}
+
+a.menu-item {
+  text-decoration: none;
+}
+
 .menu-label {
   padding: var(--space-6) var(--space-8) var(--space-2);
   color: var(--text-faint);
@@ -739,6 +750,17 @@ button.select:disabled {
 
 .search-input input {
   padding-inline-start: var(--space-32);
+}
+
+.secret-input {
+  display: flex;
+  gap: var(--space-8);
+  align-items: center;
+}
+
+.secret-input > .input {
+  flex: 1;
+  min-width: 0;
 }
 
 .settings-row {

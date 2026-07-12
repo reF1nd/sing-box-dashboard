@@ -27,21 +27,50 @@ import {
   type AccentPreference,
   type ThemePreference,
 } from "./app/context";
-import { dismissError, useCurrentError } from "./app/errorStore";
+import {
+  DesktopHostContext,
+  DesktopLocalContext,
+  useDaemonConnection,
+  useDesktopHost,
+  useLocalDesktopHost,
+  useRemoteSession,
+  type DesktopHost,
+} from "./app/desktop";
+import { loadDisableDeprecatedWarnings } from "./app/deprecatedWarnings";
+import { dismissError, showError, useCurrentError } from "./app/errorStore";
 import { useDismiss, useStreamOutage, useUnaryOnce } from "./app/hooks";
-import { I18nProvider, useI18n } from "./app/i18n";
+import { I18nProvider, useI18n, type Translate } from "./app/i18n";
+import {
+  DesktopRemoteControls,
+  DesktopServerPicker,
+  DesktopServiceControls,
+  DesktopToolbar,
+} from "./components/DesktopToolbar";
 import { Icon, type IconName } from "./components/Icon";
+import { ToolbarSlotsProvider } from "./components/PageHeader";
 import { Brand, Button, Dialog, IconButton, Spinner, StateDot } from "./components/ui";
 import { SSH_DEFAULT_TERMINAL_TYPE, SSH_DEFAULT_USERNAME } from "./lib/tailscaleSSH";
 import { ConnectionErrorView } from "./views/ConnectionErrorView";
 import { ConnectionsView } from "./views/ConnectionsView";
+import { DesktopSetupView } from "./views/DesktopSetupView";
+import {
+  CrashReportDetailView,
+  CrashReportFileView,
+  CrashReportListView,
+  crashReportFileDisplayName,
+  crashReportTitle,
+} from "./views/CrashReportsView";
 import { GroupsView } from "./views/GroupsView";
 import { LogsView } from "./views/LogsView";
 import { OverviewView } from "./views/OverviewView";
+import { ImportProfileFileDialog, ImportRemoteProfileDialog } from "./views/ProfileViews";
 import {
+  AppSettingsView,
+  CoreView,
   PreferencesView,
   ServersView,
   SettingsView,
+  SponsorsView,
   TerminalConfigurationView,
   TerminalThemeEditorView,
   TerminalThemePickerView,
@@ -65,12 +94,18 @@ export type Route =
   | { page: "tools/tailscale"; tag: string }
   | { page: "tools/tailscale/ssh"; tag: string; peerID: string; username: string; terminalType: string }
   | { page: "tools/usbip"; tag: string }
+  | { page: "tools/crash-reports" }
+  | { page: "tools/crash-reports/detail"; name: string; crashedAt: number | null }
+  | { page: "tools/crash-reports/file"; name: string; file: string; crashedAt: number | null }
   | { page: "settings" }
+  | { page: "settings/app" }
+  | { page: "settings/core" }
   | { page: "settings/preferences" }
   | { page: "settings/preferences/terminal" }
   | { page: "settings/preferences/terminal/theme"; scheme: "light" | "dark" }
   | { page: "settings/preferences/terminal/custom"; scheme: "light" | "dark" }
-  | { page: "settings/servers" };
+  | { page: "settings/servers" }
+  | { page: "settings/sponsors" };
 
 function decodeSegment(segment: string): string {
   try {
@@ -113,11 +148,31 @@ function routeFromHash(): Route {
           return { page: "tools/tailscale", tag: segments[2] ?? "" };
         case "usbip":
           return { page: "tools/usbip", tag: segments[2] ?? "" };
+        case "crash-reports": {
+          if (segments[2]) {
+            const atParam = query.get("at");
+            const crashedAt = atParam !== null && /^\d+$/.test(atParam) ? Number(atParam) : null;
+            if (segments[3]) {
+              return {
+                page: "tools/crash-reports/file",
+                name: segments[2],
+                file: segments[3],
+                crashedAt,
+              };
+            }
+            return { page: "tools/crash-reports/detail", name: segments[2], crashedAt };
+          }
+          return { page: "tools/crash-reports" };
+        }
         default:
           return { page: "tools" };
       }
     case "settings":
       switch (segments[1]) {
+        case "app":
+          return { page: "settings/app" };
+        case "core":
+          return { page: "settings/core" };
         case "preferences":
           if (segments[2] === "terminal") {
             if (segments[3] === "theme" && (segments[4] === "light" || segments[4] === "dark")) {
@@ -131,6 +186,8 @@ function routeFromHash(): Route {
           return { page: "settings/preferences" };
         case "servers":
           return { page: "settings/servers" };
+        case "sponsors":
+          return { page: "settings/sponsors" };
         default:
           return { page: "settings" };
       }
@@ -146,7 +203,71 @@ function isStartedOnlyToolsSubpage(page: string): boolean {
   return page.startsWith("tools/tailscale") || page.startsWith("tools/usbip");
 }
 
-export function App() {
+function routeTitle(route: Route, t: Translate, language: string): string {
+  switch (route.page) {
+    case "overview":
+      return t("Dashboard");
+    case "groups":
+      return t("Groups");
+    case "connections":
+      return t("Connections");
+    case "logs":
+      return t("Logs");
+    case "tools":
+      return t("Tools");
+    case "tools/network-quality":
+      return t("Network Quality");
+    case "tools/stun":
+      return t("STUN Test");
+    case "tools/tailscale":
+      return route.tag !== "" ? t("Tailscale: {tag}", { tag: route.tag }) : "Tailscale";
+    case "tools/tailscale/ssh":
+      return t("Tools");
+    case "tools/usbip":
+      return route.tag !== "" ? t("USB/IP: {tag}", { tag: route.tag }) : "USB/IP";
+    case "tools/crash-reports":
+      return t("Crash Report");
+    case "tools/crash-reports/detail":
+      return crashReportTitle(route.name, route.crashedAt, language);
+    case "tools/crash-reports/file":
+      return crashReportFileDisplayName(route.file, t);
+    case "settings":
+      return t("Settings");
+    case "settings/app":
+      return t("App");
+    case "settings/core":
+      return t("Core");
+    case "settings/preferences":
+      return t("Preferences");
+    case "settings/preferences/terminal":
+      return t("Terminal Configuration");
+    case "settings/preferences/terminal/theme":
+      return route.scheme === "dark" ? t("Dark") : t("Light");
+    case "settings/preferences/terminal/custom":
+      return t("Custom theme");
+    case "settings/servers":
+      return t("Remote Control");
+    case "settings/sponsors":
+      return t("Sponsors");
+  }
+}
+
+const DESKTOP_LOCAL_SERVER: Server = { id: "local", name: "sing-box", url: "", secret: "" };
+const DESKTOP_ACTIVE_KEY = "sing-box-dashboard.desktop-active-server";
+
+export function App(props: { desktop?: DesktopHost } = {}) {
+  const desktop = props.desktop ?? null;
+  return (
+    <I18nProvider>
+      <DesktopHostContext.Provider value={desktop}>
+        {desktop !== null ? <DesktopApp host={desktop} /> : <WebApp />}
+        <GlobalErrorDialog />
+      </DesktopHostContext.Provider>
+    </I18nProvider>
+  );
+}
+
+function useAppState() {
   const [serversState, setServersState] = useState<ServersState>(() => loadServersState());
   const [theme, setTheme] = useState<ThemePreference>(() => loadThemePreference());
   const [accent, setAccent] = useState<AccentPreference>(() => loadAccentPreference());
@@ -168,16 +289,6 @@ export function App() {
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
-  const activeServer =
-    serversState.servers.find((server) => server.id === serversState.activeId) ?? null;
-
-  useEffect(() => {
-    if (!activeServer && location.hash !== "") {
-      history.replaceState(null, "", location.pathname + location.search);
-      setRoute(routeFromHash());
-    }
-  }, [activeServer]);
-
   const updateServers = (next: ServersState) => {
     saveServersState(next);
     setServersState(next);
@@ -193,34 +304,132 @@ export function App() {
     setAccent(next);
   };
 
+  return { serversState, updateServers, theme, updateTheme, accent, updateAccent, route, setRoute };
+}
+
+function WebApp() {
+  const state = useAppState();
+
+  const activeServer =
+    state.serversState.servers.find((server) => server.id === state.serversState.activeId) ?? null;
+
+  const setRoute = state.setRoute;
+  useEffect(() => {
+    if (!activeServer && location.hash !== "") {
+      history.replaceState(null, "", location.pathname + location.search);
+      setRoute(routeFromHash());
+    }
+  }, [activeServer, setRoute]);
+
+  if (!activeServer) {
+    return (
+      <SetupView
+        onCreate={(server) => {
+          state.updateServers({
+            servers: [...state.serversState.servers, server],
+            activeId: server.id,
+          });
+          navigate("overview");
+        }}
+        theme={state.theme}
+        onThemeChange={state.updateTheme}
+        accent={state.accent}
+        onAccentChange={state.updateAccent}
+      />
+    );
+  }
+
   return (
-    <I18nProvider>
-      {!activeServer ? (
-        <SetupView
-          onCreate={(server) => {
-            updateServers({ servers: [...serversState.servers, server], activeId: server.id });
-            navigate("overview");
-          }}
-          theme={theme}
-          onThemeChange={updateTheme}
-          accent={accent}
-          onAccentChange={updateAccent}
+    <Shell
+      key={activeServer.id}
+      server={activeServer}
+      serversState={state.serversState}
+      onServersChange={state.updateServers}
+      route={state.route}
+      theme={state.theme}
+      onThemeChange={state.updateTheme}
+      accent={state.accent}
+      onAccentChange={state.updateAccent}
+    />
+  );
+}
+
+function DesktopApp(props: { host: DesktopHost }) {
+  const host = props.host;
+  const state = useAppState();
+  const connection = useDaemonConnection(host);
+  const [activeId, setActiveId] = useState<string>(
+    () => localStorage.getItem(DESKTOP_ACTIVE_KEY) ?? DESKTOP_LOCAL_SERVER.id,
+  );
+
+  useEffect(() => {
+    document.body.dataset.platform = host.platform;
+  }, [host]);
+
+  const selectServer = (id: string) => {
+    localStorage.setItem(DESKTOP_ACTIVE_KEY, id);
+    setActiveId(id);
+  };
+
+  const servers = state.serversState.servers;
+  useEffect(() => {
+    if (activeId !== DESKTOP_LOCAL_SERVER.id && !servers.some((server) => server.id === activeId)) {
+      localStorage.setItem(DESKTOP_ACTIVE_KEY, DESKTOP_LOCAL_SERVER.id);
+      setActiveId(DESKTOP_LOCAL_SERVER.id);
+    }
+  }, [activeId, servers]);
+
+  const exitRemoteControl = (alert?: string) => {
+    selectServer(DESKTOP_LOCAL_SERVER.id);
+    if (alert !== undefined) {
+      showError(alert);
+    }
+  };
+
+  const activeServer =
+    state.serversState.servers.find((server) => server.id === activeId) ?? DESKTOP_LOCAL_SERVER;
+  const local = activeServer.id === DESKTOP_LOCAL_SERVER.id;
+
+  const picker = (
+    <DesktopServerPicker
+      serversState={state.serversState}
+      localServerId={DESKTOP_LOCAL_SERVER.id}
+      activeId={activeServer.id}
+      onSelect={selectServer}
+    />
+  );
+
+  if (local && connection.phase !== "connected") {
+    return (
+      <div className={styles.desktopRoot}>
+        <DesktopToolbar window picker={picker} />
+        <DesktopSetupView
+          host={host}
+          state={connection}
+          serversState={state.serversState}
+          onSelectServer={(server) => selectServer(server.id)}
         />
-      ) : (
-        <Shell
-          key={activeServer.id}
-          server={activeServer}
-          serversState={serversState}
-          onServersChange={updateServers}
-          route={route}
-          theme={theme}
-          onThemeChange={updateTheme}
-          accent={accent}
-          onAccentChange={updateAccent}
-        />
-      )}
-      <GlobalErrorDialog />
-    </I18nProvider>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.desktopRoot}>
+      <Shell
+        key={activeServer.id}
+        server={activeServer}
+        desktopLocal={local}
+        desktopPicker={picker}
+        onExitRemote={local ? undefined : exitRemoteControl}
+        serversState={state.serversState}
+        onServersChange={state.updateServers}
+        route={state.route}
+        theme={state.theme}
+        onThemeChange={state.updateTheme}
+        accent={state.accent}
+        onAccentChange={state.updateAccent}
+      />
+    </div>
   );
 }
 
@@ -250,8 +459,11 @@ function GlobalErrorDialog() {
   );
 }
 
-function Shell(props: {
+interface ShellProps {
   server: Server;
+  desktopLocal?: boolean;
+  desktopPicker?: React.ReactNode;
+  onExitRemote?: (alert?: string) => void;
   serversState: ServersState;
   onServersChange: (state: ServersState) => void;
   route: Route;
@@ -259,38 +471,58 @@ function Shell(props: {
   onThemeChange: (theme: ThemePreference) => void;
   accent: AccentPreference;
   onAccentChange: (accent: AccentPreference) => void;
-}) {
+}
+
+function Shell(props: ShellProps) {
+  const host = useDesktopHost();
   const [generation, setGeneration] = useState(0);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const api = useMemo(() => new DaemonApi(props.server), [props.server, generation]);
+  const api = useMemo(
+    () =>
+      host !== null && props.desktopLocal === true
+        ? new DaemonApi(props.server, host.transport)
+        : new DaemonApi(props.server),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- generation is an intentional extra dependency; bumping it is what forces the recreation
+    [props.server, host, props.desktopLocal, generation],
+  );
   return (
-    <ApiContext.Provider value={api}>
-      <ShellContent {...props} onRetry={() => setGeneration(generation + 1)} />
-    </ApiContext.Provider>
+    <DesktopLocalContext.Provider value={host !== null && props.desktopLocal === true}>
+      <ApiContext.Provider value={api}>
+        <ShellContent {...props} onRetry={() => setGeneration(generation + 1)} />
+      </ApiContext.Provider>
+    </DesktopLocalContext.Provider>
   );
 }
 
-function ShellContent(props: {
-  server: Server;
-  serversState: ServersState;
-  onServersChange: (state: ServersState) => void;
-  route: Route;
-  theme: ThemePreference;
-  onThemeChange: (theme: ThemePreference) => void;
-  accent: AccentPreference;
-  onAccentChange: (accent: AccentPreference) => void;
-  onRetry: () => void;
-}) {
+function ShellContent(props: ShellProps & { onRetry: () => void }) {
   const api = useApi();
-  const { t } = useI18n();
+  const host = useDesktopHost();
+  const localHost = useLocalDesktopHost();
+  const { t, language } = useI18n();
   const route = props.route;
   const serviceStatus = useStream(api.serviceStatus);
   const groups = useStream(api.groups);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [leadSlot, setLeadSlot] = useState<HTMLElement | null>(null);
+  const [endSlot, setEndSlot] = useState<HTMLElement | null>(null);
 
   const lostError = useStreamOutage(
     serviceStatus,
     isTerminalCode(serviceStatus.errorCode) || serviceStatus.data.status === null,
+  );
+
+  const onExitRemote = props.onExitRemote;
+  useRemoteSession(
+    host !== null && props.desktopLocal !== true ? serviceStatus : null,
+    (failure) => {
+      onExitRemote?.(
+        t(
+          failure.hadConnected
+            ? "Disconnected from remote server {name}"
+            : "Failed to connect to remote server {name}",
+          { name: serverDisplayName(props.server) },
+        ) + (failure.message !== "" ? `\n${failure.message}` : ""),
+      );
+    },
   );
 
   useEffect(() => {
@@ -333,13 +565,18 @@ function ShellContent(props: {
       (route.page === "groups" && (!started || (groupsKnown && !hasGroups))) ||
       (route.page === "connections" && !started) ||
       (isStartedOnlyToolsSubpage(route.page) && !started) ||
-      (route.page === "tools/usbip" && capabilities.ready && !capabilities.supports("usbip"));
+      (route.page === "tools/usbip" && capabilities.ready && !capabilities.supports("usbip")) ||
+      (route.page.startsWith("tools/crash-reports") && localHost === null);
     if (invisible) {
-      navigate(isStartedOnlyToolsSubpage(route.page) ? "tools" : "overview");
+      navigate(
+        isStartedOnlyToolsSubpage(route.page) || route.page.startsWith("tools/crash-reports")
+          ? "tools"
+          : "overview",
+      );
     }
-  }, [known, started, groupsKnown, hasGroups, route, capabilities]);
+  }, [known, started, groupsKnown, hasGroups, route, capabilities, localHost]);
 
-  if (lostError !== null) {
+  if (lostError !== null && host === null) {
     return (
       <ConnectionErrorView
         server={props.server}
@@ -355,7 +592,10 @@ function ShellContent(props: {
   if (serviceStatus.data.status === null) {
     return (
       <div className={styles.connectingView}>
-        <Brand className={styles.connectingBrand} />
+        <Brand
+          className={styles.connectingBrand}
+          product={host !== null ? "desktop" : undefined}
+        />
         <Spinner className={styles.connectingSpinner} />
       </div>
     );
@@ -387,68 +627,135 @@ function ShellContent(props: {
     </button>
   );
 
+  const mainPages = (
+    <>
+      {navItem("logs", t("Logs"), "text_snippet", route.page === "logs")}
+      {navItem("tools", t("Tools"), "terminal", route.page.startsWith("tools"))}
+      {navItem("settings", t("Settings"), "settings", route.page.startsWith("settings"))}
+    </>
+  );
+
+  const mainContent = (
+    <main className={styles.content}>
+      {route.page === "overview" && <OverviewView />}
+      {route.page === "groups" && <GroupsView />}
+      {route.page === "connections" && <ConnectionsView />}
+      {route.page === "logs" && <LogsView />}
+      {route.page === "tools" && <ToolsView />}
+      {route.page === "tools/network-quality" && <NetworkQualityView />}
+      {route.page === "tools/stun" && <STUNTestView />}
+      {route.page === "tools/tailscale" && <TailscaleEndpointView tag={route.tag} />}
+      {route.page === "tools/usbip" && <UsbipView tag={route.tag} />}
+      {route.page === "tools/crash-reports" && <CrashReportListView />}
+      {route.page === "tools/crash-reports/detail" && (
+        <CrashReportDetailView name={route.name} crashedAt={route.crashedAt} />
+      )}
+      {route.page === "tools/crash-reports/file" && (
+        <CrashReportFileView name={route.name} file={route.file} crashedAt={route.crashedAt} />
+      )}
+      {route.page === "settings" && <SettingsView />}
+      {route.page === "settings/app" && (
+        <AppSettingsView
+          theme={props.theme}
+          onThemeChange={props.onThemeChange}
+          accent={props.accent}
+          onAccentChange={props.onAccentChange}
+        />
+      )}
+      {route.page === "settings/core" && <CoreView />}
+      {route.page === "settings/preferences" && (
+        <PreferencesView
+          theme={props.theme}
+          onThemeChange={props.onThemeChange}
+          accent={props.accent}
+          onAccentChange={props.onAccentChange}
+        />
+      )}
+      {route.page === "settings/preferences/terminal" && <TerminalConfigurationView />}
+      {route.page === "settings/preferences/terminal/theme" && (
+        <TerminalThemePickerView scheme={route.scheme} />
+      )}
+      {route.page === "settings/preferences/terminal/custom" && (
+        <TerminalThemeEditorView scheme={route.scheme} />
+      )}
+      {route.page === "settings/servers" && (
+        <ServersView serversState={props.serversState} onServersChange={props.onServersChange} />
+      )}
+      {route.page === "settings/sponsors" && <SponsorsView />}
+    </main>
+  );
+
   return (
     <CapabilitiesContext.Provider value={capabilities}>
       <div className={styles.app}>
-        <header className={styles.mobileTopbar}>
-          <IconButton
-            aria-label={t("Toggle navigation")}
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen(!menuOpen)}
-          >
-            <Icon name={menuOpen ? "close" : "menu"} size={18} />
-          </IconButton>
-          <div className={styles.mobileTopbarBrand}>sing-box</div>
-        </header>
+        {host === null && (
+          <header className={styles.mobileTopbar}>
+            <IconButton
+              aria-label={t("Toggle navigation")}
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen(!menuOpen)}
+            >
+              <Icon name={menuOpen ? "close" : "menu"} size={18} />
+            </IconButton>
+            <div className={styles.mobileTopbarBrand}>sing-box</div>
+          </header>
+        )}
         {menuOpen && <div className={styles.sidebarScrim} onClick={() => setMenuOpen(false)} />}
-        <nav className={cx(styles.sidebar, menuOpen && styles.open)}>
-          <div className={styles.sidebarBrand}>
-            sing-box
-            {serverInfo && <span className={styles.sidebarBrandVersion}>{serverInfo.version}</span>}
-          </div>
-          {navItem("overview", t("Overview"), "dashboard", route.page === "overview")}
-          {hasGroups && navItem("groups", t("Groups"), "folder", route.page === "groups")}
-          {started && navItem("connections", t("Connections"), "swap_vert", route.page === "connections")}
-          {navItem("logs", t("Logs"), "text_snippet", route.page === "logs")}
-          {navItem("tools", t("Tools"), "terminal", route.page.startsWith("tools"))}
-          {navItem("settings", t("Settings"), "settings", route.page.startsWith("settings"))}
-          <ServerPicker
-            serversState={props.serversState}
-            onServersChange={props.onServersChange}
-            connected={reachable}
-            started={started}
-          />
-        </nav>
-        <main className={styles.content}>
-          {route.page === "overview" && <OverviewView />}
-          {route.page === "groups" && <GroupsView />}
-          {route.page === "connections" && <ConnectionsView />}
-          {route.page === "logs" && <LogsView />}
-          {route.page === "tools" && <ToolsView />}
-          {route.page === "tools/network-quality" && <NetworkQualityView />}
-          {route.page === "tools/stun" && <STUNTestView />}
-          {route.page === "tools/tailscale" && <TailscaleEndpointView tag={route.tag} />}
-          {route.page === "tools/usbip" && <UsbipView tag={route.tag} />}
-          {route.page === "settings" && <SettingsView />}
-          {route.page === "settings/preferences" && (
-            <PreferencesView
-              theme={props.theme}
-              onThemeChange={props.onThemeChange}
-              accent={props.accent}
-              onAccentChange={props.onAccentChange}
+        {host !== null ? (
+          <nav className={styles.sidebar}>
+            <div className={styles.sidebarTitlebar} />
+            {started ? (
+              <>
+                <div className={styles.sidebarSectionTitle}>{t("Dashboard")}</div>
+                {navItem("overview", t("Overview"), "dashboard", route.page === "overview")}
+                {hasGroups && navItem("groups", t("Groups"), "folder", route.page === "groups")}
+                {navItem("connections", t("Connections"), "swap_vert", route.page === "connections")}
+              </>
+            ) : (
+              navItem("overview", t("Dashboard"), "dashboard", route.page === "overview")
+            )}
+            {mainPages}
+          </nav>
+        ) : (
+          <nav className={cx(styles.sidebar, menuOpen && styles.open)}>
+            <div className={styles.sidebarBrand}>
+              sing-box
+              {serverInfo && <span className={styles.sidebarBrandVersion}>{serverInfo.version}</span>}
+            </div>
+            {navItem("overview", t("Overview"), "dashboard", route.page === "overview")}
+            {hasGroups && navItem("groups", t("Groups"), "folder", route.page === "groups")}
+            {started && navItem("connections", t("Connections"), "swap_vert", route.page === "connections")}
+            {mainPages}
+            <ServerPicker
+              serversState={props.serversState}
+              onServersChange={props.onServersChange}
+              connected={reachable}
+              started={started}
             />
-          )}
-          {route.page === "settings/preferences/terminal" && <TerminalConfigurationView />}
-          {route.page === "settings/preferences/terminal/theme" && (
-            <TerminalThemePickerView scheme={route.scheme} />
-          )}
-          {route.page === "settings/preferences/terminal/custom" && (
-            <TerminalThemeEditorView scheme={route.scheme} />
-          )}
-          {route.page === "settings/servers" && (
-            <ServersView serversState={props.serversState} onServersChange={props.onServersChange} />
-          )}
-        </main>
+          </nav>
+        )}
+        {host !== null ? (
+          <div className={styles.contentColumn}>
+            <DesktopToolbar
+              title={routeTitle(route, t, language)}
+              picker={props.desktopPicker}
+              controls={
+                props.desktopLocal === true ? (
+                  <DesktopServiceControls host={host} />
+                ) : onExitRemote !== undefined ? (
+                  <DesktopRemoteControls onDisconnect={() => onExitRemote()} />
+                ) : undefined
+              }
+              leadRef={setLeadSlot}
+              endRef={setEndSlot}
+            />
+            <ToolbarSlotsProvider lead={leadSlot} end={endSlot}>
+              {mainContent}
+            </ToolbarSlotsProvider>
+          </div>
+        ) : (
+          mainContent
+        )}
         {serviceStatus.phase !== "active" && (
           <div className={styles.reconnectPill} role="status">
             <Spinner />
@@ -456,6 +763,8 @@ function ShellContent(props: {
           </div>
         )}
         {started && <DeprecatedWarningsGate />}
+        {host !== null && <ImportRemoteProfileDialog host={host} />}
+        {host !== null && <ImportProfileFileDialog host={host} />}
       </div>
     </CapabilitiesContext.Provider>
   );
@@ -548,6 +857,10 @@ function DeprecatedWarningsGate() {
   const warnings = useUnaryOnce(() => api.getDeprecatedWarnings());
   const [index, setIndex] = useState(0);
   const [visible, setVisible] = useState(true);
+
+  if (loadDisableDeprecatedWarnings()) {
+    return null;
+  }
 
   const current = warnings?.[index];
   if (!current || !visible) {

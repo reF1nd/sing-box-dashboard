@@ -3,33 +3,38 @@ import { useRef, useState } from "react";
 import { formatBytes, formatMemoryBytes } from "../api/format";
 import { useStream } from "../api/stream";
 import { useApi } from "../app/context";
+import { useLocalDesktopHost } from "../app/desktop";
+import type { DesktopHost } from "../app/desktop";
 import { showError } from "../app/errorStore";
 import { usePendingValue } from "../app/hooks";
 import { useI18n } from "../app/i18n";
 import {
   DASHBOARD_CARDS,
+  isDashboardCardId,
   loadDashboardCardsConfig,
   moveCard,
   orderedEnabledCards,
   resetDashboardCardsConfig,
   saveDashboardCardsConfig,
   toggleCard,
-  type DashboardCardId,
   type DashboardCardsConfig,
 } from "../app/dashboardCards";
 import { Icon } from "../components/Icon";
+import { PageHeader } from "../components/PageHeader";
 import { StreamBanner } from "../components/StreamBanner";
 import { AdaptiveSegmented, Button, Card, DataLine, Dialog, EmptyState, IconButton, Sparkline } from "../components/ui";
 import { ServiceStatus_Type } from "../gen/daemon/started_service_pb";
+import { ProfileCard, SystemProxyCard } from "./ProfileViews";
 import styles from "./OverviewView.module.css";
 import { cx } from "../lib/cx";
 
 export function OverviewView() {
   const api = useApi();
   const { t } = useI18n();
+  const host = useLocalDesktopHost();
   const serviceStatus = useStream(api.serviceStatus);
   const [cardsConfig, setCardsConfig] = useState<DashboardCardsConfig>(() =>
-    loadDashboardCardsConfig(),
+    loadDashboardCardsConfig(host !== null),
   );
   const [managing, setManaging] = useState(false);
   const statusType = serviceStatus.data.status?.status;
@@ -58,27 +63,48 @@ export function OverviewView() {
     }
   }
 
+  const fatalMessage =
+    host !== null &&
+    statusType === ServiceStatus_Type.FATAL &&
+    serviceStatus.data.status?.errorMessage !== ""
+      ? serviceStatus.data.status?.errorMessage
+      : undefined;
+
   return (
     <div className="page">
-      <div className="page-header">
-        <h1 className="page-title">{t("Overview")}</h1>
-        {started && (
-          <div className="actions">
+      <PageHeader
+        title={t("Overview")}
+        actions={
+          started ? (
             <IconButton
               title={t("Dashboard Items")}
               onClick={() => setManaging(true)}
             >
               <Icon name="tune" />
             </IconButton>
-          </div>
-        )}
-      </div>
+          ) : undefined
+        }
+      />
       <StreamBanner snapshot={serviceStatus} />
-      {stateLabel !== null && <EmptyState icon="dashboard">{stateLabel}</EmptyState>}
-      {started && <OverviewCards config={cardsConfig} />}
+      {fatalMessage !== undefined && (
+        <div className="banner error">
+          <Icon name="warning_amber" />
+          <div>{fatalMessage}</div>
+        </div>
+      )}
+      {started ? (
+        <OverviewCards config={cardsConfig} host={host} />
+      ) : host !== null ? (
+        <div className={styles.cardGrid}>
+          {orderedEnabledCards(cardsConfig).includes("profile") && <ProfileCard host={host} />}
+        </div>
+      ) : (
+        stateLabel !== null && <EmptyState icon="dashboard">{stateLabel}</EmptyState>
+      )}
       {managing && (
         <CardManagementDialog
           config={cardsConfig}
+          desktop={host !== null}
           onChange={updateCardsConfig}
           onClose={() => setManaging(false)}
         />
@@ -87,7 +113,7 @@ export function OverviewView() {
   );
 }
 
-function OverviewCards(props: { config: DashboardCardsConfig }) {
+function OverviewCards(props: { config: DashboardCardsConfig; host: DesktopHost | null }) {
   const api = useApi();
   const { t } = useI18n();
   const status = useStream(api.status);
@@ -98,7 +124,7 @@ function OverviewCards(props: { config: DashboardCardsConfig }) {
   const trafficAvailable = current?.trafficAvailable ?? false;
   const modeList = clashMode.data.modeList;
 
-  const renderCard = (card: DashboardCardId) => {
+  const renderCard = (card: string) => {
     switch (card) {
       case "uploadTraffic":
         return (
@@ -138,6 +164,11 @@ function OverviewCards(props: { config: DashboardCardsConfig }) {
             <DataLine label={t("Outbound")} value={current ? current.connectionsOut : "..."} />
           </Card>
         );
+      case "systemProxy":
+        if (props.host === null) {
+          return null;
+        }
+        return <SystemProxyCard key={card} host={props.host} />;
       case "clashMode":
         if (modeList.length <= 1) {
           return null;
@@ -157,6 +188,13 @@ function OverviewCards(props: { config: DashboardCardsConfig }) {
             />
           </Card>
         );
+      case "profile":
+        if (props.host === null) {
+          return null;
+        }
+        return <ProfileCard key={card} host={props.host} />;
+      default:
+        return null;
     }
   };
 
@@ -165,6 +203,7 @@ function OverviewCards(props: { config: DashboardCardsConfig }) {
 
 function CardManagementDialog(props: {
   config: DashboardCardsConfig;
+  desktop: boolean;
   onChange: (config: DashboardCardsConfig) => void;
   onClose: () => void;
 }) {
@@ -192,7 +231,12 @@ function CardManagementDialog(props: {
       <h3>{t("Dashboard Items")}</h3>
       <div className={styles.cardManageList} ref={listRef}>
         {props.config.order.map((card, index) => {
-          const enabled = props.config.enabled.includes(card);
+          if (!isDashboardCardId(card)) {
+            return null;
+          }
+          const entry = DASHBOARD_CARDS[card];
+          const permanent = entry.permanent === true;
+          const enabled = permanent || props.config.enabled.includes(card);
           return (
             <div
               key={card}
@@ -211,12 +255,13 @@ function CardManagementDialog(props: {
               >
                 <Icon name="drag_handle" size={14} />
               </span>
-              <Icon name={DASHBOARD_CARDS[card].icon} size={15} />
-              <span className={styles.cardManageTitle}>{t(DASHBOARD_CARDS[card].title)}</span>
+              <Icon name={entry.icon} size={15} />
+              <span className={styles.cardManageTitle}>{t(entry.title)}</span>
               <button
                 className={enabled ? "switch on" : "switch"}
                 role="switch"
                 aria-checked={enabled}
+                disabled={permanent}
                 onClick={() => props.onChange(toggleCard(props.config, card))}
               />
             </div>
@@ -227,7 +272,7 @@ function CardManagementDialog(props: {
         <Button
           variant="danger"
           style={{ marginInlineEnd: "auto" }}
-          onClick={() => props.onChange(resetDashboardCardsConfig())}
+          onClick={() => props.onChange(resetDashboardCardsConfig(props.desktop))}
         >
           {t("Reset")}
         </Button>

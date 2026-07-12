@@ -4,24 +4,30 @@ import { memo, useMemo, useState } from "react";
 import type { ConnectionRow } from "../api/daemon";
 import { formatBytes, formatClockTime, formatDateTime, formatDurationMs } from "../api/format";
 import { useStream } from "../api/stream";
+import {
+  loadConnectionSortMode,
+  loadConnectionStateFilter,
+  saveConnectionSortMode,
+  saveConnectionStateFilter,
+  type ConnectionSortMode,
+  type ConnectionStateFilter,
+} from "../app/connectionPreferences";
 import { useApi, useIsMobile } from "../app/context";
 import { showError } from "../app/errorStore";
 import { useI18n, type MessageKey } from "../app/i18n";
 import { Icon } from "../components/Icon";
+import { PageHeader } from "../components/PageHeader";
 import { StreamStates } from "../components/StreamBanner";
 import { Badge, Button, DataLine, DetailSection, DetailShell, MenuItem, MenuLabel, OthersMenu, SearchInput } from "../components/ui";
 import styles from "./ConnectionsView.module.css";
 
-type StateFilter = "all" | "active" | "closed";
-type SortMode = "date" | "traffic" | "trafficTotal";
-
-const STATE_OPTIONS: { value: StateFilter; label: MessageKey }[] = [
+const STATE_OPTIONS: { value: ConnectionStateFilter; label: MessageKey }[] = [
   { value: "active", label: "Active" },
   { value: "closed", label: "Closed" },
   { value: "all", label: "All" },
 ];
 
-const SORT_OPTIONS: { value: SortMode; label: MessageKey }[] = [
+const SORT_OPTIONS: { value: ConnectionSortMode; label: MessageKey }[] = [
   { value: "date", label: "By date" },
   { value: "traffic", label: "By traffic" },
   { value: "trafficTotal", label: "By traffic total" },
@@ -32,8 +38,8 @@ export function ConnectionsView() {
   const { t } = useI18n();
   const connections = useStream(api.connections);
   const isMobile = useIsMobile();
-  const [stateFilter, setStateFilter] = useState<StateFilter>("active");
-  const [sortMode, setSortMode] = useState<SortMode>("date");
+  const [stateFilter, setStateFilter] = useState<ConnectionStateFilter>(loadConnectionStateFilter);
+  const [sortMode, setSortMode] = useState<ConnectionSortMode>(loadConnectionSortMode);
   const [search, setSearch] = useState("");
   const [detailId, setDetailId] = useState<string | null>(null);
 
@@ -102,16 +108,19 @@ export function ConnectionsView() {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1 className="page-title">{t("Connections")}</h1>
-        <div className="actions">
+      <PageHeader
+        title={t("Connections")}
+        actions={
           <OthersMenu>
             <MenuLabel>{t("State")}</MenuLabel>
             {STATE_OPTIONS.map((option) => (
               <MenuItem
                 key={option.value}
                 checked={stateFilter === option.value}
-                onSelect={() => setStateFilter(option.value)}
+                onSelect={() => {
+                  setStateFilter(option.value);
+                  saveConnectionStateFilter(option.value);
+                }}
               >
                 {t(option.label)}
               </MenuItem>
@@ -122,7 +131,10 @@ export function ConnectionsView() {
               <MenuItem
                 key={option.value}
                 checked={sortMode === option.value}
-                onSelect={() => setSortMode(option.value)}
+                onSelect={() => {
+                  setSortMode(option.value);
+                  saveConnectionSortMode(option.value);
+                }}
               >
                 {t(option.label)}
               </MenuItem>
@@ -138,8 +150,8 @@ export function ConnectionsView() {
               {t("Close All Connections")}
             </MenuItem>
           </OthersMenu>
-        </div>
-      </div>
+        }
+      />
       <div className="field">
         <SearchInput value={search} onChange={setSearch} />
       </div>

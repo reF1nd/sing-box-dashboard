@@ -80,6 +80,12 @@ export function formatDateTime(timestampMs: number, locale?: string): string {
   return new Date(timestampMs).toLocaleString(locale);
 }
 
+export function formatAbbreviatedDateTime(timestampMs: number, locale?: string): string {
+  return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(
+    new Date(timestampMs),
+  );
+}
+
 export function formatRelativeTime(timestampMs: number, nowMs: number, locale?: string): string {
   const deltaSeconds = Math.round((timestampMs - nowMs) / 1000);
   const formatter = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });

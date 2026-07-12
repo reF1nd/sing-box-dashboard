@@ -34,6 +34,22 @@
   color: var(--danger);
 }
 
+button:global(.settings-row).destructive-row {
+  color: var(--danger);
+}
+
+button:global(.settings-row).destructive-row > :global(.icon):first-child {
+  color: var(--danger);
+}
+
+.row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
 .theme-picker-loading {
   display: flex;
   justify-content: center;
@@ -64,6 +80,16 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.sponsors-plea {
+  padding: 0 var(--space-4);
+}
+
+.empty-row {
+  padding: var(--space-12) var(--space-16);
+  font-weight: var(--weight-normal);
+  color: var(--text-faint);
 }
 
 .server-item {

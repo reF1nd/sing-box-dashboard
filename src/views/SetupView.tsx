@@ -11,7 +11,7 @@ import {
   ReachabilityIndicator,
   useServerReachability,
 } from "../components/ReachabilityIndicator";
-import { Brand, Button, Field, Spinner, ThemeMenu, ThemeSelect } from "../components/ui";
+import { Brand, Button, Field, SecretInput, Spinner, ThemeMenu, ThemeSelect } from "../components/ui";
 import { guessApiBaseUrl } from "../lib/connectivity";
 import styles from "./SetupView.module.css";
 
@@ -146,13 +146,11 @@ export function SetupView(props: {
             />
           </Field>
           <Field label={t("Secret")}>
-            <input
-              className="input"
+            <SecretInput
               value={secret}
               placeholder={t("Optional")}
-              autoComplete="off"
               disabled={connecting}
-              onChange={(event) => setSecret(event.target.value)}
+              onChange={setSecret}
             />
           </Field>
           {error === null && <ReachabilityIndicator reachability={reachability} url={url} />}

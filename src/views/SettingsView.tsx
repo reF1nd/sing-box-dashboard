@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import {
   createServerId,
@@ -9,11 +9,22 @@ import {
   type Server,
   type ServersState,
 } from "../api/config";
-import { navigate, type AccentPreference, type ThemePreference } from "../app/context";
+import { formatBytes } from "../api/format";
+import { useStream } from "../api/stream";
+import { navigate, useApi, type AccentPreference, type ThemePreference } from "../app/context";
+import { useDesktopHost } from "../app/desktop";
+import type { DesktopHost, DesktopSettingsState, DesktopSpeedMode } from "../app/desktop";
+import {
+  loadDisableDeprecatedWarnings,
+  saveDisableDeprecatedWarnings,
+} from "../app/deprecatedWarnings";
+import { showError } from "../app/errorStore";
+import { ServiceStatus_Type } from "../gen/daemon/started_service_pb";
 import { LanguageSelect, useI18n } from "../app/i18n";
 import { Icon } from "../components/Icon";
+import { PageHeader } from "../components/PageHeader";
 import { ReachabilityIndicator, useServerReachability } from "../components/ReachabilityIndicator";
-import { Button, Dialog, Field, IconButton, NavRow, Select, Spinner, ThemeMenu, ThemeSelect } from "../components/ui";
+import { Button, Dialog, Field, IconButton, MenuItem, MenuLink, NavRow, SecretInput, Select, Spinner, ThemeMenu, ThemeSelect, useContextMenu } from "../components/ui";
 import {
   DEFAULT_DARK_THEME_NAME,
   DEFAULT_LIGHT_THEME_NAME,
@@ -27,22 +38,33 @@ import { cx } from "../lib/cx";
 
 export function SettingsView() {
   const { t } = useI18n();
+  const host = useDesktopHost();
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1 className="page-title">{t("Settings")}</h1>
-      </div>
+      <PageHeader title={t("Settings")} />
       <div className="settings-stack">
         <div className="nav-list">
-          <NavRow
-            icon="tune"
-            title={t("Preferences")}
-            onClick={() => navigate("settings/preferences")}
-          />
+          {host === null && (
+            <NavRow
+              icon="tune"
+              title={t("Preferences")}
+              onClick={() => navigate("settings/preferences")}
+            />
+          )}
+          {host !== null && (
+            <NavRow icon="info" title={t("App")} onClick={() => navigate("settings/app")} />
+          )}
+          {host !== null && (
+            <NavRow
+              icon="memory"
+              title={t("Core")}
+              onClick={() => navigate("settings/core")}
+            />
+          )}
           <NavRow
             icon="dns"
-            title={t("Servers")}
+            title={host !== null ? t("Remote Control") : t("Servers")}
             onClick={() => navigate("settings/servers")}
           />
         </div>
@@ -53,14 +75,220 @@ export function SettingsView() {
               icon="description"
               title={t("Documentation")}
               href="https://sing-box.sagernet.org"
+              contextMenu={
+                <>
+                  <MenuLink href="https://sing-box.sagernet.org/changelog/">
+                    {t("Changelog")}
+                  </MenuLink>
+                  <MenuLink href="https://sing-box.sagernet.org/configuration/">
+                    {t("Configuration")}
+                  </MenuLink>
+                </>
+              }
             />
             <NavRow
               icon="code"
               title={t("Source Code")}
-              href="https://github.com/SagerNet/sing-box-dashboard"
+              href={
+                host !== null
+                  ? "https://github.com/SagerNet/sing-box"
+                  : "https://github.com/SagerNet/sing-box-dashboard"
+              }
+              contextMenu={
+                <MenuLink
+                  href={
+                    host !== null
+                      ? "https://github.com/SagerNet/sing-box/releases"
+                      : "https://github.com/SagerNet/sing-box-dashboard/releases"
+                  }
+                >
+                  {t("Releases")}
+                </MenuLink>
+              }
+            />
+            <NavRow
+              icon="favorite"
+              title={t("Sponsors")}
+              onClick={() => navigate("settings/sponsors")}
             />
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+export function AppSettingsView(props: {
+  theme: ThemePreference;
+  onThemeChange: (theme: ThemePreference) => void;
+  accent: AccentPreference;
+  onAccentChange: (accent: AccentPreference) => void;
+}) {
+  const host = useDesktopHost();
+  if (host === null) {
+    return null;
+  }
+  return <AppSettingsContent host={host} {...props} />;
+}
+
+function AppSettingsContent({
+  host,
+  ...preferences
+}: {
+  host: DesktopHost;
+  theme: ThemePreference;
+  onThemeChange: (theme: ThemePreference) => void;
+  accent: AccentPreference;
+  onAccentChange: (accent: AccentPreference) => void;
+}) {
+  const { t } = useI18n();
+  const [appVersion, setAppVersion] = useState<string | null>(null);
+  const [settings, setSettings] = useState<DesktopSettingsState | null>(null);
+  const [cacheSize, setCacheSize] = useState<number | null>(null);
+  const [clearing, setClearing] = useState(false);
+  const copyMenu = useContextMenu(
+    <MenuItem
+      icon="content_copy"
+      onSelect={() => {
+        void navigator.clipboard.writeText(appVersion ?? "").catch(showError);
+      }}
+    >
+      {t("Copy")}
+    </MenuItem>,
+  );
+
+  useEffect(() => {
+    let stale = false;
+    host
+      .appVersion()
+      .then((value) => {
+        if (!stale) {
+          setAppVersion(value);
+        }
+      })
+      .catch(showError);
+    host.settings
+      .get()
+      .then((value) => {
+        if (!stale) {
+          setSettings(value);
+        }
+      })
+      .catch(showError);
+    host.settings
+      .cacheSize()
+      .then((value) => {
+        if (!stale) {
+          setCacheSize(value);
+        }
+      })
+      .catch(showError);
+    return () => {
+      stale = true;
+    };
+  }, [host]);
+
+  const clearCache = () => {
+    setClearing(true);
+    host.settings
+      .clearCache()
+      .then(() => host.settings.cacheSize())
+      .then(setCacheSize)
+      .catch(showError)
+      .finally(() => setClearing(false));
+  };
+
+  return (
+    <div className="page">
+      <SettingsPageHeader title={t("App")} />
+      <div className="settings-stack">
+        {settings === null ? (
+          <Spinner />
+        ) : (
+          <>
+            <div className={styles.settingsList}>
+              <div className="settings-row" onContextMenu={copyMenu.onContextMenu}>
+                <span className="settings-row-label">{t("App version")}</span>
+                {appVersion === null ? (
+                  <Spinner />
+                ) : (
+                  <span className="nav-row-detail">{appVersion}</span>
+                )}
+                {copyMenu.element}
+              </div>
+              <div className="settings-row">
+                <span className="settings-row-label">{t("Language")}</span>
+                <LanguageSelect />
+              </div>
+              <div className="settings-row">
+                <span className="settings-row-label">{t("Appearance")}</span>
+                <ThemeSelect theme={preferences.theme} onChange={preferences.onThemeChange} />
+              </div>
+              <div className="settings-row">
+                <span className="settings-row-label">{t("Theme")}</span>
+                <ThemeMenu accent={preferences.accent} onChange={preferences.onAccentChange} />
+              </div>
+              <div className="settings-row">
+                <span className="settings-row-label">{t("Start At Login")}</span>
+                <button
+                  className={settings.openAtLogin ? "switch on" : "switch"}
+                  role="switch"
+                  aria-checked={settings.openAtLogin}
+                  aria-label={t("Start At Login")}
+                  onClick={() => {
+                    const value = !settings.openAtLogin;
+                    setSettings({ ...settings, openAtLogin: value });
+                    host.settings.setOpenAtLogin(value).catch(showError);
+                  }}
+                />
+              </div>
+              <div className="settings-row">
+                <span className="settings-row-label">{t("Real-time Speed")}</span>
+                <Select<DesktopSpeedMode>
+                  inline
+                  options={[
+                    { value: "disabled", label: t("Disabled") },
+                    { value: "enabled", label: t("Enabled") },
+                    { value: "unified", label: t("Unified") },
+                  ]}
+                  value={settings.speedMode}
+                  onChange={(mode) => {
+                    setSettings({ ...settings, speedMode: mode });
+                    host.settings.setSpeedMode(mode).catch(showError);
+                  }}
+                />
+              </div>
+              <div className="settings-row">
+                <span className="settings-row-label">{t("Cache Size")}</span>
+                {cacheSize === null ? (
+                  <Spinner />
+                ) : (
+                  <span className="nav-row-detail">{formatBytes(cacheSize)}</span>
+                )}
+              </div>
+              {cacheSize !== null && cacheSize > 0 && (
+                <button
+                  className={cx("settings-row", styles.destructiveRow)}
+                  disabled={clearing}
+                  onClick={clearCache}
+                >
+                  {clearing ? <Spinner /> : <Icon name="delete" size={15} />}
+                  <span className="settings-row-label">{t("Clear Cache")}</span>
+                </button>
+              )}
+            </div>
+            <div>
+              <div className="list-section-title">Tailscale</div>
+              <div className="nav-list">
+                <NavRow
+                  icon="terminal"
+                  title={t("Terminal Configuration")}
+                  onClick={() => navigate("settings/preferences/terminal")}
+                />
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -75,16 +303,187 @@ function SettingsPageHeader(props: {
   const { t } = useI18n();
   const back = props.back ?? "settings";
   return (
-    <div className="page-header">
-      <button
-        className="back-button"
-        aria-label={props.backLabel ?? t("Settings")}
-        onClick={() => navigate(back)}
-      >
-        <Icon name="arrow_back" size={20} />
-      </button>
-      <h1 className="page-title">{props.title}</h1>
-      {props.action && <div className="actions">{props.action}</div>}
+    <PageHeader
+      title={props.title}
+      actions={props.action}
+      back={{ label: props.backLabel ?? t("Settings"), onClick: () => navigate(back) }}
+    />
+  );
+}
+
+export function SponsorsView() {
+  const { t } = useI18n();
+  return (
+    <div className="page">
+      <SettingsPageHeader title={t("Sponsors")} />
+      <div className="settings-stack">
+        <div className={cx("hint", styles.sponsorsPlea)}>
+          <strong>{t("If I’ve defended your modern life, please consider sponsoring me.")}</strong>
+        </div>
+        <div className="nav-list">
+          <NavRow
+            title={t("GitHub Sponsors (recommended)")}
+            href="https://github.com/sponsors/nekohasekai"
+          />
+          <NavRow title={t("Other methods")} href="https://sekai.icu/sponsors/" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function CoreView() {
+  const host = useDesktopHost();
+  if (host === null) {
+    return null;
+  }
+  return <CoreViewContent host={host} />;
+}
+
+function CoreViewContent({ host }: { host: DesktopHost }) {
+  const { t } = useI18n();
+  const api = useApi();
+  const serviceStatus = useStream(api.serviceStatus);
+  const [coreVersion, setCoreVersion] = useState<string | null>(null);
+  const [dataSize, setDataSize] = useState<number | "unavailable" | null>(null);
+  const [disableWarnings, setDisableWarnings] = useState(loadDisableDeprecatedWarnings);
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const copyMenu = useContextMenu(
+    <MenuItem
+      icon="content_copy"
+      onSelect={() => {
+        void navigator.clipboard.writeText(coreVersion ?? "").catch(showError);
+      }}
+    >
+      {t("Copy")}
+    </MenuItem>,
+  );
+
+  const running =
+    serviceStatus.data.status?.status === ServiceStatus_Type.STARTED ||
+    serviceStatus.data.status?.status === ServiceStatus_Type.STARTING;
+
+  const loadInfo = useCallback(() => {
+    setCoreVersion(null);
+    host.core
+      .info()
+      .then((value) => setCoreVersion(value.coreVersion))
+      .catch(showError);
+  }, [host]);
+
+  useEffect(() => {
+    loadInfo();
+  }, [loadInfo]);
+
+  const refreshSize = useCallback(() => {
+    setDataSize(null);
+    host.core
+      .workingDirectory()
+      .then((value) => setDataSize(value.size))
+      .catch(() => setDataSize("unavailable"));
+  }, [host]);
+
+  useEffect(() => {
+    refreshSize();
+  }, [refreshSize]);
+
+  const destroy = () => {
+    setBusy(true);
+    host.core
+      .destroyWorkingDirectory()
+      .then(() => {
+        setConfirming(false);
+        loadInfo();
+        refreshSize();
+      })
+      .catch(showError)
+      .finally(() => setBusy(false));
+  };
+
+  return (
+    <div className="page">
+      <SettingsPageHeader title={t("Core")} />
+      <div className="settings-stack">
+        {coreVersion === null ? (
+          <Spinner />
+        ) : (
+          <>
+            <div className={styles.settingsList}>
+              <div className="settings-row" onContextMenu={copyMenu.onContextMenu}>
+                <span className="settings-row-label">{t("Version")}</span>
+                <span className="nav-row-detail">{coreVersion}</span>
+                {copyMenu.element}
+              </div>
+              <div className="settings-row">
+                <span className="settings-row-label">{t("Data Size")}</span>
+                {dataSize === null ? (
+                  <Spinner />
+                ) : dataSize === "unavailable" ? (
+                  <span className={styles.fieldError}>{t("Unavailable")}</span>
+                ) : (
+                  <span className="nav-row-detail">{formatBytes(dataSize)}</span>
+                )}
+              </div>
+            </div>
+            {coreVersion.includes("-") && (
+              <div>
+                <div className="list-section-title">{t("Beta Settings")}</div>
+                <div className={styles.settingsList}>
+                  <div className="settings-row">
+                    <div className={styles.rowText}>
+                      <span className="settings-row-label">{t("Disable Deprecated Warnings")}</span>
+                      <span className="hint">
+                        {t("Do not show warnings about usages of deprecated features.")}
+                      </span>
+                    </div>
+                    <button
+                      className={disableWarnings ? "switch on" : "switch"}
+                      role="switch"
+                      aria-checked={disableWarnings}
+                      aria-label={t("Disable Deprecated Warnings")}
+                      onClick={() => {
+                        const value = !disableWarnings;
+                        setDisableWarnings(value);
+                        saveDisableDeprecatedWarnings(value);
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+            <div>
+              <div className="list-section-title">{t("Working Directory")}</div>
+              <div className="row-actions">
+                <Button
+                  variant="danger"
+                  disabled={busy}
+                  onClick={() => (running ? setConfirming(true) : destroy())}
+                >
+                  {busy && !confirming ? <Spinner /> : <Icon name="delete" size={16} />}
+                  {t("Destroy")}
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+      {confirming && (
+        <Dialog onClose={() => (busy ? undefined : setConfirming(false))}>
+          <h3>{t("Service is Running")}</h3>
+          <p className="dialog-message">
+            {t("The service must be stopped before destroying the working directory.")}
+          </p>
+          <div className="row-actions dialog-actions">
+            <Button onClick={() => setConfirming(false)} disabled={busy}>
+              {t("Cancel")}
+            </Button>
+            <Button variant="danger" onClick={destroy} disabled={busy}>
+              {busy ? <Spinner /> : t("Stop Service and Continue")}
+            </Button>
+          </div>
+        </Dialog>
+      )}
     </div>
   );
 }
@@ -222,6 +621,7 @@ function ThemeSchemeSection(props: {
 
 export function TerminalConfigurationView() {
   const { t } = useI18n();
+  const host = useDesktopHost();
   const [config, setConfig] = useState<TerminalConfig>(loadTerminalConfig);
 
   const update = (patch: Partial<TerminalConfig>) => {
@@ -234,8 +634,8 @@ export function TerminalConfigurationView() {
     <div className="page">
       <SettingsPageHeader
         title={t("Terminal Configuration")}
-        back="settings/preferences"
-        backLabel={t("Preferences")}
+        back={host !== null ? "settings/app" : "settings/preferences"}
+        backLabel={host !== null ? t("App") : t("Preferences")}
       />
       <div className="settings-stack">
         <ThemeSchemeSection
@@ -455,6 +855,7 @@ export function ServersView(props: {
   onServersChange: (state: ServersState) => void;
 }) {
   const { t } = useI18n();
+  const host = useDesktopHost();
   const { servers } = props.serversState;
   const [editing, setEditing] = useState<Server | "new" | null>(null);
 
@@ -471,29 +872,40 @@ export function ServersView(props: {
   return (
     <div className="page">
       <SettingsPageHeader
-        title={t("Servers")}
+        title={host !== null ? t("Remote Control") : t("Servers")}
         action={
           <IconButton
-            aria-label={t("Add server")}
-            title={t("Add server")}
+            aria-label={t("New Server")}
+            title={t("New Server")}
             onClick={() => setEditing("new")}
           >
             <Icon name="add" size={18} />
           </IconButton>
         }
       />
-      <div className="nav-list">
-        {servers.map((server) => (
-          <button className={styles.serverItem} key={server.id} onClick={() => setEditing(server)}>
-            <span className={styles.serverItemText}>
-              <span className="server-row-name">{serverDisplayName(server)}</span>
-              <span className="server-row-url">{server.url}</span>
-            </span>
-            <span className="settings-row-chevron">
-              <Icon name="keyboard_arrow_right" size={14} />
-            </span>
-          </button>
-        ))}
+      <div>
+        <div className="list-section-title">{t("Servers")}</div>
+        <div className="nav-list">
+          {servers.length === 0 ? (
+            <div className={styles.emptyRow}>{t("No servers")}</div>
+          ) : (
+            servers.map((server) => (
+              <button
+                className={styles.serverItem}
+                key={server.id}
+                onClick={() => setEditing(server)}
+              >
+                <span className={styles.serverItemText}>
+                  <span className="server-row-name">{serverDisplayName(server)}</span>
+                  <span className="server-row-url">{server.url}</span>
+                </span>
+                <span className="settings-row-chevron">
+                  <Icon name="keyboard_arrow_right" size={14} />
+                </span>
+              </button>
+            ))
+          )}
+        </div>
       </div>
       {editing !== null && (
         <ServerDialog
@@ -559,13 +971,7 @@ export function ServerDialog(props: {
           />
         </Field>
         <Field label={t("Secret")}>
-          <input
-            className="input"
-            value={secret}
-            placeholder={t("Optional")}
-            autoComplete="off"
-            onChange={(event) => setSecret(event.target.value)}
-          />
+          <SecretInput value={secret} placeholder={t("Optional")} onChange={setSecret} />
         </Field>
         <ReachabilityIndicator reachability={reachability} url={url} />
         <div className="row-actions dialog-actions">
