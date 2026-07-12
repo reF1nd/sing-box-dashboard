@@ -9,7 +9,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "generate": "buf generate && node scripts/gen-terminal-themes.mjs",
-    "generate:dev": "buf generate ../sing-box --path ../sing-box/daemon/started_service.proto",
+    "generate:dev": "cp ../sing-box/daemon/started_service.proto proto/daemon/started_service.proto && buf generate",
     "lint": "eslint src scripts eslint.config.js vite.config.ts",
     "lint:css": "stylelint \"src/**/*.css\"",
     "test": "vitest run"
