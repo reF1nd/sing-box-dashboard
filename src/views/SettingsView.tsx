@@ -13,7 +13,7 @@ import { formatBytes } from "../api/format";
 import { useStream } from "../api/stream";
 import { navigate, useApi, type AccentPreference, type ThemePreference } from "../app/context";
 import { useDesktopHost, useLocalDesktopHost } from "../app/desktop";
-import type { DesktopHost, DesktopSettingsState, DesktopSpeedMode } from "../app/desktop";
+import type { DesktopHost, DesktopSettingsState } from "../app/desktop";
 import {
   loadDisableDeprecatedWarnings,
   saveDisableDeprecatedWarnings,
@@ -136,31 +136,12 @@ function AppSettingsContent({
   onAccentChange: (accent: AccentPreference) => void;
 }) {
   const { t } = useI18n();
-  const [appVersion, setAppVersion] = useState<string | null>(null);
   const [settings, setSettings] = useState<DesktopSettingsState | null>(null);
   const [cacheSize, setCacheSize] = useState<number | null>(null);
   const [clearing, setClearing] = useState(false);
-  const copyMenu = useContextMenu(
-    <MenuItem
-      icon="content_copy"
-      onSelect={() => {
-        void navigator.clipboard.writeText(appVersion ?? "").catch(showError);
-      }}
-    >
-      {t("Copy")}
-    </MenuItem>,
-  );
 
   useEffect(() => {
     let stale = false;
-    host
-      .appVersion()
-      .then((value) => {
-        if (!stale) {
-          setAppVersion(value);
-        }
-      })
-      .catch(showError);
     host.settings
       .get()
       .then((value) => {
@@ -201,15 +182,6 @@ function AppSettingsContent({
         ) : (
           <>
             <div className={styles.settingsList}>
-              <div className="settings-row" onContextMenu={copyMenu.onContextMenu}>
-                <span className="settings-row-label">{t("App version")}</span>
-                {appVersion === null ? (
-                  <Spinner />
-                ) : (
-                  <span className="nav-row-detail">{appVersion}</span>
-                )}
-                {copyMenu.element}
-              </div>
               <div className="settings-row">
                 <span className="settings-row-label">{t("Language")}</span>
                 <LanguageSelect />
@@ -237,22 +209,6 @@ function AppSettingsContent({
                 />
               </div>
               <div className="settings-row">
-                <span className="settings-row-label">{t("Real-time Speed")}</span>
-                <Select<DesktopSpeedMode>
-                  inline
-                  options={[
-                    { value: "disabled", label: t("Disabled") },
-                    { value: "enabled", label: t("Enabled") },
-                    { value: "unified", label: t("Unified") },
-                  ]}
-                  value={settings.speedMode}
-                  onChange={(mode) => {
-                    setSettings({ ...settings, speedMode: mode });
-                    host.settings.setSpeedMode(mode).catch(showError);
-                  }}
-                />
-              </div>
-              <div className="settings-row">
                 <span className="settings-row-label">{t("Cache Size")}</span>
                 {cacheSize === null ? (
                   <Spinner />
@@ -266,8 +222,8 @@ function AppSettingsContent({
                   disabled={clearing}
                   onClick={clearCache}
                 >
-                  {clearing ? <Spinner /> : <Icon name="delete" size={15} />}
                   <span className="settings-row-label">{t("Clear Cache")}</span>
+                  {clearing && <Spinner />}
                 </button>
               )}
             </div>
@@ -427,15 +383,22 @@ function CoreViewContent({ host }: { host: DesktopHost }) {
             )}
             <div>
               <div className="list-section-title">{t("Working Directory")}</div>
-              <div className="row-actions">
-                <Button
-                  variant="danger"
+              <div className={styles.settingsList}>
+                <button
+                  className={cx("settings-row", styles.actionRow)}
+                  disabled={busy}
+                  onClick={() => host.core.openWorkingDirectory().catch(showError)}
+                >
+                  <span className="settings-row-label">{t("Open")}</span>
+                </button>
+                <button
+                  className={cx("settings-row", styles.destructiveRow)}
                   disabled={busy}
                   onClick={() => (running ? setConfirming(true) : destroy())}
                 >
-                  {busy && !confirming ? <Spinner /> : <Icon name="delete" size={16} />}
-                  {t("Destroy")}
-                </Button>
+                  <span className="settings-row-label">{t("Destroy")}</span>
+                  {busy && !confirming && <Spinner />}
+                </button>
               </div>
             </div>
           </>

@@ -34,11 +34,11 @@
   color: var(--danger);
 }
 
-button:global(.settings-row).destructive-row {
-  color: var(--danger);
+button:global(.settings-row).action-row {
+  color: var(--accent);
 }
 
-button:global(.settings-row).destructive-row > :global(.icon):first-child {
+button:global(.settings-row).destructive-row {
   color: var(--danger);
 }
 

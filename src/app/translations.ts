@@ -317,7 +317,6 @@ export const TRANSLATIONS = {
   "Serial number": { "zh-Hans": "序列号", "zh-Hant": "序號", "fa": "شماره سریال", "ru": "Серийный номер" },
   "Version": { "zh-Hans": "版本", "zh-Hant": "版本", "fa": "نسخه", "ru": "Версия" },
   "App": { "zh-Hans": "应用", "zh-Hant": "應用", "fa": "برنامه", "ru": "Приложение" },
-  "App version": { "zh-Hans": "应用版本", "zh-Hant": "應用程式版本", "fa": "نسخه برنامه", "ru": "Версия приложения" },
   "Remote Control": { "zh-Hans": "远程控制", "zh-Hant": "遠端控制", "fa": "کنترل از راه دور", "ru": "Удаленное управление" },
   "Bus ID": { "zh-Hans": "总线 ID", "zh-Hant": "匯流排 ID", "fa": "شناسه گذرگاه", "ru": "ID шины" },
   "Backend": { "zh-Hans": "后端", "zh-Hant": "後端", "fa": "بک‌اند", "ru": "Бэкенд" },
