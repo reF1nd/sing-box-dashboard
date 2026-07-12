@@ -186,6 +186,12 @@ export interface DesktopHost {
     cacheSize(): Promise<number>;
     clearCache(): Promise<void>;
   };
+  // window.close() destroys sandboxed renderer webContents without emitting the host window's close event.
+  application: {
+    showMainWindow(): void;
+    closeTrayMenu(): void;
+    quit(): void;
+  };
   onImportRemoteProfile(listener: (request: { name: string; url: string }) => void): () => void;
   onImportProfileFile(listener: (request: { fileName: string; data: Uint8Array }) => void): () => void;
 }

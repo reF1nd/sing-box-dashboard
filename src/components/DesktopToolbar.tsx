@@ -86,13 +86,18 @@ export function DesktopServiceControls(props: { host: DesktopHost }) {
 
   return (
     <div className={styles.toolbarService}>
-      {started && <ToolbarUptime />}
       {transitioning ? (
         <span className={styles.toolbarSpinner}>
           <Spinner />
         </span>
       ) : started ? (
-        <IconButton title={t("Stop")} disabled={busy} onClick={() => run(() => host.service.stop())}>
+        <IconButton
+          className={styles.toolbarServiceButton}
+          title={t("Stop")}
+          disabled={busy}
+          onClick={() => run(() => host.service.stop())}
+        >
+          <ToolbarUptime />
           <Icon name="stop" />
         </IconButton>
       ) : (
@@ -116,8 +121,12 @@ export function DesktopRemoteControls(props: { onDisconnect: () => void }) {
 
   return (
     <div className={styles.toolbarService}>
-      {started && <ToolbarUptime />}
-      <IconButton title={t("Disconnect")} onClick={props.onDisconnect}>
+      <IconButton
+        className={started ? styles.toolbarServiceButton : undefined}
+        title={t("Disconnect")}
+        onClick={props.onDisconnect}
+      >
+        {started && <ToolbarUptime />}
         <Icon name="cloud_off" />
       </IconButton>
     </div>

@@ -655,6 +655,9 @@ a.menu-item {
 
 .input:focus, .select:focus {
   outline: none;
+}
+
+.input:focus-visible, .select:focus-visible {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
@@ -666,8 +669,8 @@ button.select {
 }
 
 button.select[aria-expanded="true"] {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  background: var(--inset);
+  border-color: var(--border-strong);
 }
 
 button.select:disabled {

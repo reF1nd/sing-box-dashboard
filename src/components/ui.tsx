@@ -837,6 +837,8 @@ export function QRCode(props: { value: string }) {
   );
 }
 
+let openModalCount = 0;
+
 function useShowModal(focusSelf = false) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -845,13 +847,21 @@ function useShowModal(focusSelf = false) {
       return;
     }
     dialog.showModal();
+    openModalCount += 1;
+    document.documentElement.dataset.scrim = "";
     if (focusSelf) {
       // showModal() moves focus to the first focusable control, leaving it
       // visibly highlighted. Focus the dialog itself instead so nothing starts
       // out selected. (Dialogs that want an initial focus use autoFocus.)
       dialog.focus();
     }
-    return () => dialog.close();
+    return () => {
+      dialog.close();
+      openModalCount -= 1;
+      if (openModalCount === 0) {
+        delete document.documentElement.dataset.scrim;
+      }
+    };
   }, [focusSelf]);
   return ref;
 }

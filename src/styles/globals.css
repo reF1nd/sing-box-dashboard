@@ -45,6 +45,8 @@
   --highlight: rgb(0 0 0 / 14%);
 
   --scrim: rgb(0 0 0 / 32%);
+  --window-controls-surface: var(--surface);
+  --window-controls-text: var(--text);
   --bright: #fff;
   --terminal-bg: #181818;
 
@@ -157,6 +159,23 @@
 
   --scrollbar-thumb: var(--scrollbar-thumb-on-dark);
   --scrollbar-thumb-hover: var(--scrollbar-thumb-hover-on-dark);
+}
+
+@property --window-controls-surface {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --window-controls-text {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+[data-scrim] {
+  --window-controls-surface: color-mix(in srgb, var(--surface), black 32%);
+  --window-controls-text: color-mix(in srgb, var(--text), black 32%);
 }
 
 [data-accent="default"] {

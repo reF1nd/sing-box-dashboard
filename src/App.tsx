@@ -740,9 +740,12 @@ function ShellContent(props: ShellProps & { onRetry: () => void }) {
         {host !== null ? (
           <nav className={styles.sidebar}>
             <div className={styles.sidebarTitlebar} />
+            <div className={styles.sidebarBrand}>
+              sing-box
+              {serverInfo && <span className={styles.sidebarBrandVersion}>{serverInfo.version}</span>}
+            </div>
             {started ? (
               <>
-                <div className={styles.sidebarSectionTitle}>{t("Dashboard")}</div>
                 {navItem("overview", t("Overview"), "dashboard", route.page === "overview")}
                 {hasGroups && navItem("groups", t("Groups"), "folder", route.page === "groups")}
                 {navItem("connections", t("Connections"), "swap_vert", route.page === "connections")}
