@@ -112,7 +112,12 @@
 
 .toolbar-spinner {
   display: inline-flex;
-  padding: 0 var(--space-6);
+  align-items: center;
+  justify-content: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  background: var(--hover);
+  border-radius: var(--radius-md);
 }
 
 .toolbar-uptime {
