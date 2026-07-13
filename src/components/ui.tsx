@@ -79,11 +79,12 @@ export function Spinner(props: { className?: string }) {
   return <span className={cx("spinner", props.className)} />;
 }
 
-export function Brand(props: { className?: string; product?: string }) {
+export function Brand(props: { className?: string; product?: string | null }) {
+  const product = props.product === undefined ? "dashboard" : props.product;
   return (
     <div className={cx("setup-brand", props.className)}>
       sing-box
-      <small>{props.product ?? "dashboard"}</small>
+      {product !== null && <small>{product}</small>}
     </div>
   );
 }

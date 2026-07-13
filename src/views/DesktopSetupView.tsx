@@ -53,7 +53,7 @@ export function DesktopSetupView(props: {
   return (
     <div className="setup">
       <div className="setup-panel">
-        <Brand product="desktop" />
+        <Brand product={null} />
         <div className={styles.connectionErrorHeader}>
           <span className={styles.connectionErrorIcon}>
             {connecting ? <Spinner /> : <Icon name="cloud_off" size={22} />}
@@ -65,11 +65,6 @@ export function DesktopSetupView(props: {
                 {state.bundledDaemonVersion !== undefined
                   ? `${state.daemonVersion} → ${state.bundledDaemonVersion}`
                   : state.daemonVersion}
-                {state.daemonDesktopApiVersion !== undefined && (
-                  <span className={styles.connectionErrorUrl}>
-                    API {state.daemonDesktopApiVersion} ≠ {host.expectedDaemonApiVersion}
-                  </span>
-                )}
               </div>
             )}
           </div>

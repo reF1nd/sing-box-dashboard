@@ -389,7 +389,6 @@ export const TRANSLATIONS = {
   "Discard": { "zh-Hans": "放弃", "zh-Hant": "放棄", "fa": "چشم‌پوشی", "ru": "Отказаться" },
   "System HTTP Proxy": { "zh-Hans": "系统 HTTP 代理", "zh-Hant": "系統 HTTP 代理", "fa": "پروکسی HTTP سیستم", "ru": "Системный HTTP-прокси" },
   "Enabled": { "zh-Hans": "已启用", "zh-Hant": "已啟用", "fa": "فعال", "ru": "Включено" },
-  "Desktop": { "zh-Hans": "桌面", "zh-Hant": "桌面", "fa": "دسکتاپ", "ru": "Рабочий стол" },
   "Cache Size": { "zh-Hans": "缓存大小", "zh-Hant": "快取大小", "fa": "اندازه حافظه پنهان", "ru": "Размер кэша" },
   "Clear Cache": { "zh-Hans": "清除缓存", "zh-Hant": "清除快取", "fa": "پاک‌سازی حافظه پنهان", "ru": "Очистить кэш" },
   "Real-time Speed": { "zh-Hans": "实时速率", "zh-Hant": "實時速率", "fa": "نرخ لحظه‌ای", "ru": "Текущая скорость" },

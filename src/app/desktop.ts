@@ -18,7 +18,6 @@ export interface DaemonConnectionState {
   phase: DaemonConnectionPhase;
   errorMessage?: string;
   daemonVersion?: string;
-  daemonDesktopApiVersion?: number;
   bundledDaemonVersion?: string;
 }
 
@@ -97,7 +96,6 @@ export interface DesktopSettingsState {
 
 export interface DesktopHost {
   platform: string;
-  expectedDaemonApiVersion: number;
   appVersion(): Promise<string>;
   transport: Transport;
   daemon: {

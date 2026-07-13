@@ -624,7 +624,7 @@ function ShellContent(props: ShellProps & { onRetry: () => void }) {
       <div className={styles.connectingView}>
         <Brand
           className={styles.connectingBrand}
-          product={host !== null ? "desktop" : undefined}
+          product={host !== null ? null : undefined}
         />
         <Spinner className={styles.connectingSpinner} />
       </div>
