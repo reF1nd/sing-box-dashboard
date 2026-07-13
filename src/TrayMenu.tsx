@@ -25,8 +25,6 @@ import styles from "./TrayMenu.module.css";
 
 const TRAY_LOCAL_SERVER: Server = { id: "tray-local", name: "sing-box", url: "", secret: "" };
 
-const SUBMENU_WIDTH = 240;
-const SUBMENU_GAP = 6;
 const HOVER_CLOSE_DELAY = 180;
 
 const GROUPS_SUBMENU = "\0groups";
@@ -58,26 +56,14 @@ function useTrayTheme() {
 
 interface SubmenuController {
   activeKey: string | null;
-  side: "left" | "right";
-  open: (key: string, anchor: HTMLElement) => void;
-  toggle: (key: string, anchor: HTMLElement) => void;
+  open: (key: string) => void;
   scheduleClose: () => void;
   cancelClose: () => void;
   close: () => void;
 }
 
-function chooseSide(anchor: HTMLElement): "left" | "right" {
-  const rect = anchor.getBoundingClientRect();
-  const screen = window.screen as Screen & { availLeft?: number };
-  const availLeft = screen.availLeft ?? 0;
-  const availRight = availLeft + screen.availWidth;
-  const roomRight = availRight - (window.screenX + rect.right);
-  return roomRight >= SUBMENU_WIDTH + SUBMENU_GAP ? "right" : "left";
-}
-
 function useSubmenuController(): SubmenuController {
   const [activeKey, setActiveKey] = useState<string | null>(null);
-  const [side, setSide] = useState<"left" | "right">("right");
   const closeTimer = useRef<number | null>(null);
 
   const cancelClose = () => {
@@ -86,30 +72,20 @@ function useSubmenuController(): SubmenuController {
       closeTimer.current = null;
     }
   };
-  const open = (key: string, element: HTMLElement) => {
+  const open = (key: string) => {
     cancelClose();
-    if (activeKey === null) {
-      setSide(chooseSide(element));
-    }
     setActiveKey(key);
   };
   const close = () => {
     cancelClose();
     setActiveKey(null);
   };
-  const toggle = (key: string, element: HTMLElement) => {
-    if (activeKey === key) {
-      close();
-    } else {
-      open(key, element);
-    }
-  };
   const scheduleClose = () => {
     cancelClose();
     closeTimer.current = window.setTimeout(close, HOVER_CLOSE_DELAY);
   };
   useEffect(() => cancelClose, []);
-  return { activeKey, side, open, toggle, scheduleClose, cancelClose, close };
+  return { activeKey, open, scheduleClose, cancelClose, close };
 }
 
 function useMenuKeyboard(controller: SubmenuController, closeMenu: () => void) {
@@ -194,19 +170,24 @@ function TrayMenuContent(props: { host: DesktopHost }) {
     }
   };
 
-  const submenu =
+  const cascade =
     controller.activeKey === null ? null : (
-      <div
-        className={styles.submenu}
-        onMouseEnter={controller.cancelClose}
-        onMouseLeave={controller.scheduleClose}
-      >
-        {controller.activeKey === PROFILES_SUBMENU ? (
+      controller.activeKey === PROFILES_SUBMENU ? (
+        <div
+          className={styles.submenu}
+          onMouseEnter={controller.cancelClose}
+          onMouseLeave={controller.scheduleClose}
+        >
           <ProfilesSubmenu profiles={profiles} selectedId={selectedId} onSelect={selectProfile} />
-        ) : (
-          <GroupsSubmenu groups={selectableGroups} api={api} onClose={closeMenu} />
-        )}
-      </div>
+        </div>
+      ) : (
+        <GroupsCascade
+          groups={selectableGroups}
+          api={api}
+          onMouseEnter={controller.cancelClose}
+          onMouseLeave={controller.scheduleClose}
+        />
+      )
     );
 
   return (
@@ -216,7 +197,6 @@ function TrayMenuContent(props: { host: DesktopHost }) {
       onMouseDown={dismissOnBackground}
     >
       <div className={styles.content} data-tray-content onMouseDown={dismissOnBackground}>
-        {submenu !== null && controller.side === "left" && submenu}
         <div className={styles.panel} data-tray-panel>
           <div className={styles.header}>
             <span className={styles.title}>sing-box</span>
@@ -283,7 +263,7 @@ function TrayMenuContent(props: { host: DesktopHost }) {
             </button>
           </div>
         </div>
-        {submenu !== null && controller.side === "right" && submenu}
+        {cascade}
       </div>
     </div>
   );
@@ -296,21 +276,19 @@ function ParentRow(props: {
   controller: SubmenuController;
 }) {
   const { menuKey, label, detail, controller } = props;
-  const ref = useRef<HTMLButtonElement>(null);
   const active = controller.activeKey === menuKey;
   return (
     <button
-      ref={ref}
       className={cx(styles.row, active && styles.rowActive)}
       aria-haspopup="menu"
       aria-expanded={active}
-      onMouseEnter={() => ref.current !== null && controller.open(menuKey, ref.current)}
+      onMouseEnter={() => controller.open(menuKey)}
       onMouseLeave={controller.scheduleClose}
-      onClick={() => ref.current !== null && controller.toggle(menuKey, ref.current)}
+      onClick={() => controller.open(menuKey)}
       onKeyDown={(event) => {
-        if ((event.key === "ArrowRight" || event.key === "Enter") && ref.current !== null) {
+        if (event.key === "ArrowRight" || event.key === "Enter") {
           event.preventDefault();
-          controller.open(menuKey, ref.current);
+          controller.open(menuKey);
         }
       }}
     >
@@ -321,15 +299,88 @@ function ParentRow(props: {
   );
 }
 
-function GroupsSubmenu(props: { groups: Group[]; api: DaemonApi; onClose: () => void }) {
-  const { t } = useI18n();
-  const [drilledTag, setDrilledTag] = useState<string | null>(null);
-  const [testingAll, setTestingAll] = useState(false);
-  const drilledGroup = props.groups.find((group) => group.tag === drilledTag) ?? null;
+function GroupsCascade(props: {
+  groups: Group[];
+  api: DaemonApi;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+}) {
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const closeTimer = useRef<number | null>(null);
+  const activeGroup = props.groups.find((group) => group.tag === activeTag) ?? null;
+  const largestGroup = props.groups.reduce<Group | null>(
+    (largest, group) => largest === null || group.items.length > largest.items.length ? group : largest,
+    null,
+  );
 
-  if (drilledGroup !== null) {
-    return <GroupNodes group={drilledGroup} api={props.api} onBack={() => setDrilledTag(null)} onClose={props.onClose} />;
-  }
+  const cancelClose = () => {
+    if (closeTimer.current !== null) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  };
+  const close = () => {
+    cancelClose();
+    setActiveTag(null);
+  };
+  const scheduleClose = () => {
+    cancelClose();
+    closeTimer.current = window.setTimeout(close, HOVER_CLOSE_DELAY);
+  };
+  const open = (tag: string) => {
+    cancelClose();
+    setActiveTag(tag);
+  };
+
+  useEffect(() => cancelClose, []);
+  useEffect(() => {
+    if (activeTag !== null && activeGroup === null) {
+      setActiveTag(null);
+    }
+  }, [activeTag, activeGroup]);
+
+  return (
+    <div
+      className={styles.cascade}
+      onMouseEnter={props.onMouseEnter}
+      onMouseLeave={props.onMouseLeave}
+    >
+      <div className={styles.submenu}>
+        <GroupsSubmenu
+          groups={props.groups}
+          api={props.api}
+          activeTag={activeTag}
+          onOpen={open}
+          onClose={close}
+          onScheduleClose={scheduleClose}
+        />
+      </div>
+      <div
+        className={cx(styles.nodeSlot, activeGroup === null && styles.nodeSlotInactive)}
+        onMouseEnter={cancelClose}
+        onMouseLeave={scheduleClose}
+      >
+        {largestGroup !== null && <GroupNodesPlaceholder group={largestGroup} />}
+        {activeGroup !== null && (
+          <div className={styles.submenu}>
+            <GroupNodes group={activeGroup} api={props.api} onClose={close} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function GroupsSubmenu(props: {
+  groups: Group[];
+  api: DaemonApi;
+  activeTag: string | null;
+  onOpen: (tag: string) => void;
+  onClose: () => void;
+  onScheduleClose: () => void;
+}) {
+  const { t } = useI18n();
+  const [testingAll, setTestingAll] = useState(false);
 
   const urlTestAll = () => {
     setTestingAll(true);
@@ -344,13 +395,18 @@ function GroupsSubmenu(props: { groups: Group[]; api: DaemonApi; onClose: () => 
 
   return (
     <>
-      <button className={styles.row} disabled={testingAll} onClick={urlTestAll}>
+      <button
+        className={styles.row}
+        disabled={testingAll}
+        onMouseEnter={props.onClose}
+        onClick={urlTestAll}
+      >
         <span className={styles.rowIcon}>
           {testingAll ? <Spinner /> : <Icon name="speed" size={16} />}
         </span>
         <span className={styles.rowLabel}>{t("URLTest All")}</span>
       </button>
-      <button className={styles.row} onClick={closeAllConnections}>
+      <button className={styles.row} onMouseEnter={props.onClose} onClick={closeAllConnections}>
         <span className={styles.rowIcon}>
           <Icon name="close" size={16} />
         </span>
@@ -360,13 +416,16 @@ function GroupsSubmenu(props: { groups: Group[]; api: DaemonApi; onClose: () => 
         {props.groups.map((group) => (
           <button
             key={group.tag}
-            className={styles.row}
+            className={cx(styles.row, props.activeTag === group.tag && styles.rowActive)}
             aria-haspopup="menu"
-            onClick={() => setDrilledTag(group.tag)}
+            aria-expanded={props.activeTag === group.tag}
+            onMouseEnter={() => props.onOpen(group.tag)}
+            onMouseLeave={props.onScheduleClose}
+            onClick={() => props.onOpen(group.tag)}
             onKeyDown={(event) => {
               if (event.key === "ArrowRight" || event.key === "Enter") {
                 event.preventDefault();
-                setDrilledTag(group.tag);
+                props.onOpen(group.tag);
               }
             }}
           >
@@ -380,7 +439,7 @@ function GroupsSubmenu(props: { groups: Group[]; api: DaemonApi; onClose: () => 
   );
 }
 
-function GroupNodes(props: { group: Group; api: DaemonApi; onBack: () => void; onClose: () => void }) {
+function GroupNodes(props: { group: Group; api: DaemonApi; onClose: () => void }) {
   const { t } = useI18n();
   const group = props.group;
   const [testing, setTesting] = useState(false);
@@ -395,30 +454,25 @@ function GroupNodes(props: { group: Group; api: DaemonApi; onBack: () => void; o
 
   const selectItem = (tag: string) => {
     if (tag === group.selected) {
-      props.onClose();
       return;
     }
-    props.api.selectOutbound(group.tag, tag).then(props.onClose).catch(showError);
+    props.api.selectOutbound(group.tag, tag).catch(showError);
   };
 
   return (
     <>
       <button
         className={styles.row}
-        onClick={props.onBack}
+        disabled={testing}
+        onClick={runURLTest}
         onKeyDown={(event) => {
           if (event.key === "ArrowLeft") {
             event.preventDefault();
-            props.onBack();
+            event.stopPropagation();
+            props.onClose();
           }
         }}
       >
-        <span className={styles.rowIcon}>
-          <Icon name="arrow_back" size={16} />
-        </span>
-        <span className={styles.rowLabel}>{group.tag}</span>
-      </button>
-      <button className={styles.row} disabled={testing} onClick={runURLTest}>
         <span className={styles.rowIcon}>
           {testing ? <Spinner /> : <Icon name="speed" size={16} />}
         </span>
@@ -426,7 +480,18 @@ function GroupNodes(props: { group: Group; api: DaemonApi; onBack: () => void; o
       </button>
       <div className={styles.submenuList}>
         {group.items.map((item) => (
-          <button key={item.tag} className={styles.row} onClick={() => selectItem(item.tag)}>
+          <button
+            key={item.tag}
+            className={styles.row}
+            onClick={() => selectItem(item.tag)}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowLeft") {
+                event.preventDefault();
+                event.stopPropagation();
+                props.onClose();
+              }
+            }}
+          >
             <span className={styles.rowIcon}>
               {item.tag === group.selected && <Icon name="check" size={16} />}
             </span>
@@ -440,6 +505,26 @@ function GroupNodes(props: { group: Group; api: DaemonApi; onBack: () => void; o
         ))}
       </div>
     </>
+  );
+}
+
+function GroupNodesPlaceholder(props: { group: Group }) {
+  return (
+    <div className={cx(styles.submenu, styles.submenuPlaceholder)} aria-hidden="true">
+      <div className={styles.row}>
+        <span className={styles.rowIcon} />
+        <span className={styles.rowLabel}>URLTest</span>
+      </div>
+      <div className={styles.submenuList}>
+        {props.group.items.map((item) => (
+          <div key={item.tag} className={styles.row}>
+            <span className={styles.rowIcon} />
+            <span className={styles.rowLabel}>{item.tag}</span>
+            {item.urlTestDelay > 0 && <span className={styles.delay}>{item.urlTestDelay}ms</span>}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
