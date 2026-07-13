@@ -155,7 +155,10 @@ function TrayMenuContent(props: { host: DesktopHost }) {
     setBusy(true);
     (value ? host.service.start() : host.service.stop())
       .catch(showError)
-      .finally(() => setBusy(false));
+      .finally(() => {
+        api.serviceStatus.reconnectNow();
+        setBusy(false);
+      });
   };
 
   const selectableGroups = groups.data.groups.filter((group) => group.selectable);

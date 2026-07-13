@@ -81,7 +81,10 @@ export function DesktopServiceControls(props: { host: DesktopHost }) {
     setBusy(true);
     action()
       .catch(showError)
-      .finally(() => setBusy(false));
+      .finally(() => {
+        api.serviceStatus.reconnectNow();
+        setBusy(false);
+      });
   };
 
   return (

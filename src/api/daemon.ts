@@ -311,6 +311,18 @@ export class DaemonApi {
     this.usbip.retryNow();
   }
 
+  reconnectNow(): void {
+    this.serviceStatus.reconnectNow();
+    this.status.reconnectNow();
+    this.groups.reconnectNow();
+    this.clashMode.reconnectNow();
+    this.logs.reconnectNow();
+    this.connections.reconnectNow();
+    this.outbounds.reconnectNow();
+    this.tailscale.reconnectNow();
+    this.usbip.reconnectNow();
+  }
+
   async urlTest(groupTag: string): Promise<void> {
     await this.client.uRLTest({ outboundTag: groupTag });
   }

@@ -36,15 +36,10 @@ export function isTerminalCode(code: Code | undefined): boolean {
 
 // Notifying useSyncExternalStore synchronously on every message trips React's
 // "Maximum update depth exceeded" under a burst, so the fan-out is coalesced.
-const scheduleFlush: (callback: () => void) => number =
-  typeof requestAnimationFrame === "function"
-    ? (callback) => requestAnimationFrame(callback)
-    : (callback) => setTimeout(callback, 0) as unknown as number;
+const scheduleFlush = (callback: () => void): number =>
+  setTimeout(callback, 0) as unknown as number;
 
-const cancelFlush: (handle: number) => void =
-  typeof requestAnimationFrame === "function"
-    ? (handle) => cancelAnimationFrame(handle)
-    : (handle) => clearTimeout(handle);
+const cancelFlush = (handle: number): void => clearTimeout(handle);
 
 export class StreamStore<T> {
   private listeners = new Set<() => void>();
@@ -80,6 +75,14 @@ export class StreamStore<T> {
   retryNow = (): void => {
     this.skipBackoff = true;
     this.wakeBackoff?.();
+  };
+
+  reconnectNow = (): void => {
+    if (this.listeners.size === 0) {
+      return;
+    }
+    this.stop();
+    this.start();
   };
 
   private setSnapshot(next: StreamSnapshot<T>) {

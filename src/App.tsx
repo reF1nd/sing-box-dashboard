@@ -603,7 +603,7 @@ function ShellContent(props: ShellProps & { onRetry: () => void }) {
   useEffect(() => {
     const kick = () => {
       if (!document.hidden) {
-        api.retryNow();
+        api.reconnectNow();
       }
     };
     document.addEventListener("visibilitychange", kick);
