@@ -297,11 +297,14 @@ export function App(props: { desktop?: DesktopHost } = {}) {
   );
 }
 
-function useAppState() {
-  const [serversState, setServersState] = useState<ServersState>(() => loadServersState());
+function useAppState(desktop: DesktopHost | null = null) {
+  const [serversState, setServersState] = useState<ServersState>(() =>
+    desktop === null ? loadServersState() : { servers: [], activeId: null },
+  );
   const [theme, setTheme] = useState<ThemePreference>(() => loadThemePreference());
   const [accent, setAccent] = useState<AccentPreference>(() => loadAccentPreference());
   const [route, setRoute] = useState<Route>(() => routeFromHash());
+  const serversReady = useRef(desktop === null);
 
   useEffect(() => {
     applyTheme(theme);
@@ -314,13 +317,41 @@ function useAppState() {
   useEffect(() => watchSystemTheme(() => loadThemePreference()), []);
 
   useEffect(() => {
+    if (desktop === null) {
+      return;
+    }
+    serversReady.current = false;
+    let stale = false;
+    void desktop.servers
+      .load()
+      .then((storedState) => {
+        if (!stale) {
+          serversReady.current = true;
+          setServersState(storedState);
+        }
+      })
+      .catch(showError);
+    return () => {
+      stale = true;
+    };
+  }, [desktop]);
+
+  useEffect(() => {
     const onHashChange = () => setRoute(routeFromHash());
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
   const updateServers = (next: ServersState) => {
-    saveServersState(next);
+    if (desktop === null) {
+      saveServersState(next);
+    } else {
+      if (!serversReady.current) {
+        showError(new Error("Server storage is not available"));
+        return;
+      }
+      void desktop.servers.save(next).catch(showError);
+    }
     setServersState(next);
   };
 
@@ -386,7 +417,7 @@ function WebApp() {
 
 function DesktopApp(props: { host: DesktopHost }) {
   const host = props.host;
-  const state = useAppState();
+  const state = useAppState(host);
   const connection = useDaemonConnection(host);
   const [activeId, setActiveId] = useState<string>(
     () => localStorage.getItem(DESKTOP_ACTIVE_KEY) ?? DESKTOP_LOCAL_SERVER.id,

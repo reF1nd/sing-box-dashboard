@@ -38,6 +38,18 @@ export interface DesktopProfilesState {
   profiles: DesktopProfile[];
 }
 
+export interface DesktopServer {
+  id: string;
+  name: string;
+  url: string;
+  secret: string;
+}
+
+export interface DesktopServersState {
+  servers: DesktopServer[];
+  activeId: string | null;
+}
+
 export interface DesktopProfileCreate {
   name: string;
   type: DesktopProfileType;
@@ -110,6 +122,11 @@ export interface DesktopHost {
   service: {
     start(): Promise<void>;
     stop(): Promise<void>;
+    takeOver(): Promise<void>;
+  };
+  servers: {
+    load(): Promise<DesktopServersState>;
+    save(state: DesktopServersState): Promise<void>;
   };
   configuration: {
     check(content: string): Promise<void>;
