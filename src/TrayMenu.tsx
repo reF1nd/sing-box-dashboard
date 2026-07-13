@@ -143,7 +143,8 @@ function TrayMenuContent(props: { host: DesktopHost }) {
     started ||
     statusType === ServiceStatus_Type.STARTING ||
     statusType === ServiceStatus_Type.STOPPING;
-  const stopping = statusType === ServiceStatus_Type.STOPPING;
+  const transitioning =
+    statusType === ServiceStatus_Type.STARTING || statusType === ServiceStatus_Type.STOPPING;
 
   useEffect(() => {
     if (started) {
@@ -208,7 +209,7 @@ function TrayMenuContent(props: { host: DesktopHost }) {
               <Switch
                 label={t("Service")}
                 value={switchOn}
-                disabled={busy || stopping || (!switchOn && profiles.length === 0)}
+                disabled={busy || transitioning || (!switchOn && profiles.length === 0)}
                 onChange={toggleService}
               />
             ) : (

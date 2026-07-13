@@ -743,6 +743,11 @@ button.select:disabled {
   background: var(--accent);
 }
 
+.switch:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
 .switch.on::after {
   transform: translateX(15px);
 }
