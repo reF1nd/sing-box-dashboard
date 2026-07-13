@@ -297,7 +297,7 @@ function CoreViewContent({ host }: { host: DesktopHost }) {
     setCoreVersion(null);
     host.core
       .info()
-      .then((value) => setCoreVersion(value.coreVersion))
+      .then((value) => setCoreVersion(value.version))
       .catch(showError);
   }, [host]);
 
@@ -384,13 +384,6 @@ function CoreViewContent({ host }: { host: DesktopHost }) {
             <div>
               <div className="list-section-title">{t("Working Directory")}</div>
               <div className={styles.settingsList}>
-                <button
-                  className={cx("settings-row", styles.actionRow)}
-                  disabled={busy}
-                  onClick={() => host.core.openWorkingDirectory().catch(showError)}
-                >
-                  <span className="settings-row-label">{t("Open")}</span>
-                </button>
                 <button
                   className={cx("settings-row", styles.destructiveRow)}
                   disabled={busy}

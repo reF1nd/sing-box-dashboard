@@ -148,9 +148,8 @@ export interface DesktopHost {
     setEnabled(enabled: boolean): Promise<void>;
   };
   core: {
-    info(): Promise<{ version: string; coreVersion: string }>;
+    info(): Promise<{ version: string }>;
     workingDirectory(): Promise<{ path: string; size: number }>;
-    openWorkingDirectory(): Promise<void>;
     destroyWorkingDirectory(): Promise<void>;
   };
   reports: {
