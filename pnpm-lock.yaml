@@ -44,6 +44,9 @@ importers:
       '@fontsource/ibm-plex-mono':
         specifier: ^5.2.7
         version: 5.2.7
+      '@fontsource/noto-color-emoji':
+        specifier: ^5.2.12
+        version: 5.2.12
       '@lezer/highlight':
         specifier: ^1.2.3
         version: 1.2.3
@@ -843,6 +846,9 @@ packages:
 
   '@fontsource/ibm-plex-mono@5.2.7':
     resolution: {integrity: sha512-MKAb8qV+CaiMQn2B0dIi1OV3565NYzp3WN5b4oT6LTkk+F0jR6j0ZN+5BKJiIhffDC3rtBULsYZE65+0018z9w==}
+
+  '@fontsource/noto-color-emoji@5.2.12':
+    resolution: {integrity: sha512-UVOh4qxD/y42mcB4XvEdpV1WE01zn7O4+4tAWwzp5QAd4JY5jWPHu3/3T1kQoD04oYbQ5cJ9SI12IfcCKaS8aw==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -4105,6 +4111,8 @@ snapshots:
   '@fontsource-variable/source-serif-4@5.2.9': {}
 
   '@fontsource/ibm-plex-mono@5.2.7': {}
+
+  '@fontsource/noto-color-emoji@5.2.12': {}
 
   '@humanfs/core@0.19.2':
     dependencies:

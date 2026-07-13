@@ -5,14 +5,22 @@
  * feature/view styles live in their own *.module.css (e.g. the terminal-page
  * chrome lives in TerminalView.module.css).
  */
+@font-face {
+  font-family: "Noto Color Emoji";
+  font-style: normal;
+  font-weight: 400;
+  src: url("@fontsource/noto-color-emoji/files/noto-color-emoji-emoji-400-normal.woff2") format("woff2");
+  font-display: swap;
+}
+
 :root {
   /* Resolved scheme for the UA: iOS Safari tints its chrome (status bar,
      toolbars) from this plus the canvas background, not from theme-color. */
   color-scheme: light;
 
-  --font-sans: "Schibsted Grotesk Variable", -apple-system, blinkmacsystemfont, "Segoe UI", sans-serif;
-  --font-serif: "Source Serif 4 Variable", ui-serif, georgia, serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", menlo, consolas, monospace;
+  --font-sans: "Schibsted Grotesk Variable", "Apple Color Emoji", "Noto Color Emoji", -apple-system, blinkmacsystemfont, "Segoe UI", sans-serif;
+  --font-serif: "Source Serif 4 Variable", "Apple Color Emoji", "Noto Color Emoji", ui-serif, georgia, serif;
+  --font-mono: "IBM Plex Mono", "Apple Color Emoji", "Noto Color Emoji", ui-monospace, "SF Mono", menlo, consolas, monospace;
 
   --bg: #fafafa;
   --surface: #f0f0f0;

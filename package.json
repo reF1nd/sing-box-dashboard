@@ -27,6 +27,7 @@
     "@fontsource-variable/schibsted-grotesk": "^5.2.8",
     "@fontsource-variable/source-serif-4": "^5.2.9",
     "@fontsource/ibm-plex-mono": "^5.2.7",
+    "@fontsource/noto-color-emoji": "^5.2.12",
     "@lezer/highlight": "^1.2.3",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/xterm": "^6.0.0",
