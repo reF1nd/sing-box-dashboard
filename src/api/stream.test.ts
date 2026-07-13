@@ -91,10 +91,41 @@ describe("StreamStore", () => {
 
     await vi.advanceTimersByTimeAsync(1000);
     expect(calls).toBe(2);
+    expect(store.getSnapshot().phase).toBe("error");
+    expect(store.getSnapshot().error).toBe("boom");
     await vi.advanceTimersByTimeAsync(1999);
     expect(calls).toBe(2);
+    expect(store.getSnapshot().phase).toBe("error");
     await vi.advanceTimersByTimeAsync(1);
     expect(calls).toBe(3);
+    expect(store.getSnapshot().phase).toBe("error");
+    unsubscribe();
+  });
+
+  it("keeps the last error visible while a reconnect attempt is pending", async () => {
+    let calls = 0;
+    let rejectFirst: (error: Error) => void = () => {};
+    const store = new StreamStore<null>(
+      () => null,
+      () => {
+        calls += 1;
+        if (calls === 1) {
+          return new Promise((_, reject) => {
+            rejectFirst = reject;
+          });
+        }
+        return new Promise(() => {});
+      },
+    );
+    const unsubscribe = store.subscribe(() => {});
+
+    rejectFirst(new Error("offline"));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(store.getSnapshot()).toMatchObject({ phase: "error", error: "offline" });
+
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(calls).toBe(2);
+    expect(store.getSnapshot()).toMatchObject({ phase: "error", error: "offline" });
     unsubscribe();
   });
 

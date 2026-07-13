@@ -114,7 +114,11 @@ export class StreamStore<T> {
     let attempt = 0;
     while (!signal.aborted) {
       const data = this.resetOnReconnect ? this.createInitial() : this.snapshot.data;
-      this.setSnapshot({ phase: "connecting", data });
+      if (this.snapshot.phase !== "error") {
+        this.setSnapshot({ phase: "connecting", data });
+      } else if (this.resetOnReconnect) {
+        this.setSnapshot({ ...this.snapshot, data });
+      }
       try {
         await this.runStream({
           signal,
