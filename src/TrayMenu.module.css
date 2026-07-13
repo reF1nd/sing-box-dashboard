@@ -11,12 +11,23 @@
 }
 
 .content {
+  --tray-offset-y: var(--space-8);
+
   display: flex;
   gap: var(--space-6);
   align-items: flex-end;
   width: 100%;
   height: 100%;
   padding: var(--space-40) var(--space-40) var(--space-14);
+  opacity: 0;
+  transform: translateY(var(--tray-offset-y));
+  transition: opacity var(--transition-fast), transform var(--transition-medium);
+  will-change: opacity, transform;
+}
+
+:global(html[data-tray-open="true"]) .content {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 :global(html[data-tray-cascade-side="left"]) .content,
@@ -25,13 +36,23 @@
 }
 
 :global(html[data-tray-vertical-alignment="top"]) .content {
+  --tray-offset-y: calc(0px - var(--space-8));
+
   align-items: flex-start;
   padding: var(--space-14) var(--space-40) var(--space-40);
 }
 
 :global(html[data-tray-vertical-alignment="center"]) .content {
+  --tray-offset-y: 0;
+
   align-items: center;
   padding: var(--space-40);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .content {
+    transition: none;
+  }
 }
 
 .panel {
