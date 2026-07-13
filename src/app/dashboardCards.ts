@@ -1,5 +1,5 @@
 import type { IconName } from "../components/Icon";
-import { loadStoredJson, saveStoredJson } from "../lib/storage";
+import { loadStoredJson, removeStoredValue, saveStoredJson } from "../lib/storage";
 import type { MessageKey } from "./translations";
 
 export type DashboardCardId =
@@ -39,7 +39,7 @@ export interface DashboardCardsConfig {
   order: string[];
 }
 
-const STORAGE_KEY = "sing-box-dashboard.dashboard-cards";
+const STORAGE_KEY = "dashboard-cards";
 
 export function isDashboardCardId(value: string): value is DashboardCardId {
   return value in DASHBOARD_CARDS;
@@ -76,7 +76,7 @@ export function saveDashboardCardsConfig(config: DashboardCardsConfig) {
 }
 
 export function resetDashboardCardsConfig(desktop: boolean): DashboardCardsConfig {
-  localStorage.removeItem(STORAGE_KEY);
+  removeStoredValue(STORAGE_KEY);
   const defaults = dashboardCardIds(desktop);
   return { enabled: [...defaults], order: [...defaults] };
 }

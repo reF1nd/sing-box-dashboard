@@ -50,6 +50,7 @@ import { Icon, type IconName } from "./components/Icon";
 import { ToolbarSlotsProvider } from "./components/PageHeader";
 import { Brand, Button, Dialog, IconButton, Spinner, StateDot } from "./components/ui";
 import { SSH_DEFAULT_TERMINAL_TYPE, SSH_DEFAULT_USERNAME } from "./lib/tailscaleSSH";
+import { loadStoredString, saveStoredString } from "./lib/storage";
 import { ConnectionErrorView } from "./views/ConnectionErrorView";
 import { ConnectionsView } from "./views/ConnectionsView";
 import { DesktopSetupView } from "./views/DesktopSetupView";
@@ -283,7 +284,7 @@ function routeTitle(route: Route, t: Translate, language: string): string {
 }
 
 const DESKTOP_LOCAL_SERVER: Server = { id: "local", name: "sing-box", url: "", secret: "" };
-const DESKTOP_ACTIVE_KEY = "sing-box-dashboard.desktop-active-server";
+const DESKTOP_ACTIVE_KEY = "desktop-active-server";
 
 export function App(props: { desktop?: DesktopHost } = {}) {
   const desktop = props.desktop ?? null;
@@ -424,7 +425,7 @@ function DesktopApp(props: { host: DesktopHost }) {
     connectionResolvedOnce.current = true;
   }
   const [activeId, setActiveId] = useState<string>(
-    () => localStorage.getItem(DESKTOP_ACTIVE_KEY) ?? DESKTOP_LOCAL_SERVER.id,
+    () => loadStoredString(DESKTOP_ACTIVE_KEY) ?? DESKTOP_LOCAL_SERVER.id,
   );
 
   useEffect(() => {
@@ -432,14 +433,14 @@ function DesktopApp(props: { host: DesktopHost }) {
   }, [host]);
 
   const selectServer = (id: string) => {
-    localStorage.setItem(DESKTOP_ACTIVE_KEY, id);
+    saveStoredString(DESKTOP_ACTIVE_KEY, id);
     setActiveId(id);
   };
 
   const servers = state.serversState.servers;
   useEffect(() => {
     if (activeId !== DESKTOP_LOCAL_SERVER.id && !servers.some((server) => server.id === activeId)) {
-      localStorage.setItem(DESKTOP_ACTIVE_KEY, DESKTOP_LOCAL_SERVER.id);
+      saveStoredString(DESKTOP_ACTIVE_KEY, DESKTOP_LOCAL_SERVER.id);
       setActiveId(DESKTOP_LOCAL_SERVER.id);
     }
   }, [activeId, servers]);

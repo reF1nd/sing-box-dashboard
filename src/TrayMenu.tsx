@@ -21,6 +21,7 @@ import { Spinner, Switch } from "./components/ui";
 import { ServiceStatus_Type } from "./gen/daemon/started_service_pb";
 import type { Group } from "./gen/daemon/started_service_pb";
 import { cx } from "./lib/cx";
+import { watchStoredValues } from "./lib/storage";
 import styles from "./TrayMenu.module.css";
 
 const TRAY_LOCAL_SERVER: Server = { id: "tray-local", name: "sing-box", url: "", secret: "" };
@@ -46,10 +47,10 @@ function useTrayTheme() {
     };
     apply();
     const unwatchSystem = watchSystemTheme(loadThemePreference);
-    window.addEventListener("storage", apply);
+    const unwatchStored = watchStoredValues(apply);
     return () => {
       unwatchSystem();
-      window.removeEventListener("storage", apply);
+      unwatchStored();
     };
   }, []);
 }

@@ -1,4 +1,4 @@
-import { loadStoredJson, saveStoredJson } from "../lib/storage";
+import { loadStoredJson, removeStoredValue, saveStoredJson } from "../lib/storage";
 
 export interface Server {
   id: string;
@@ -12,8 +12,8 @@ export interface ServersState {
   activeId: string | null;
 }
 
-const STORAGE_KEY = "sing-box-dashboard.servers";
-const LEGACY_STORAGE_KEY = "sing-box-dashboard.server";
+const STORAGE_KEY = "servers";
+const LEGACY_STORAGE_KEY = "server";
 
 export function createServerId(): string {
   if (typeof crypto.randomUUID === "function") {
@@ -47,7 +47,7 @@ export function serverDisplayName(server: Server): string {
 
 function migrateLegacy(): ServersState | null {
   const parsed = loadStoredJson(LEGACY_STORAGE_KEY) as { url?: string; secret?: string } | null;
-  localStorage.removeItem(LEGACY_STORAGE_KEY);
+  removeStoredValue(LEGACY_STORAGE_KEY);
   if (!parsed || typeof parsed.url !== "string" || parsed.url === "") {
     return null;
   }

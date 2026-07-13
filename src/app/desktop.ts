@@ -4,6 +4,7 @@ import type { Code, Transport } from "@connectrpc/connect";
 
 import { isTerminalCode, type StreamPhase, type StreamSnapshot } from "../api/stream";
 import type { NetworkQualityTestProgress, STUNTestProgress } from "../gen/daemon/started_service_pb";
+import type { PreferenceStorage } from "../lib/storage";
 import { showError } from "./errorStore";
 
 export type DaemonConnectionPhase =
@@ -111,6 +112,7 @@ export interface DesktopHost {
   platform: string;
   appVersion(): Promise<string>;
   transport: Transport;
+  preferences: PreferenceStorage;
   daemon: {
     getState(): Promise<DaemonConnectionState>;
     onStateChanged(listener: (state: DaemonConnectionState) => void): () => void;

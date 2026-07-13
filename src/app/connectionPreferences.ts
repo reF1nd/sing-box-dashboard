@@ -1,7 +1,7 @@
 import { loadStoredJson, saveStoredJson } from "../lib/storage";
 
-const STATE_FILTER_KEY = "sing-box-dashboard.connection-state-filter";
-const SORT_MODE_KEY = "sing-box-dashboard.connection-sort";
+const STATE_FILTER_KEY = "connection-state-filter";
+const SORT_MODE_KEY = "connection-sort";
 
 export type ConnectionStateFilter = "all" | "active" | "closed";
 export type ConnectionSortMode = "date" | "traffic" | "trafficTotal";

@@ -1,16 +1,17 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { Select } from "../components/ui";
+import { loadStoredString, removeStoredValue, saveStoredString } from "../lib/storage";
 import { LANGUAGES, TRANSLATIONS, type Language, type MessageKey, type PluralForms } from "./translations";
 
 export type { Language, MessageKey };
 
 export type LanguagePreference = "auto" | Language;
 
-const LANGUAGE_KEY = "sing-box-dashboard.language";
+const LANGUAGE_KEY = "language";
 
 export function loadLanguagePreference(): LanguagePreference {
-  const value = localStorage.getItem(LANGUAGE_KEY);
+  const value = loadStoredString(LANGUAGE_KEY);
   if (value && LANGUAGES.some((language) => language.value === value)) {
     return value as Language;
   }
@@ -19,9 +20,9 @@ export function loadLanguagePreference(): LanguagePreference {
 
 export function saveLanguagePreference(preference: LanguagePreference) {
   if (preference === "auto") {
-    localStorage.removeItem(LANGUAGE_KEY);
+    removeStoredValue(LANGUAGE_KEY);
   } else {
-    localStorage.setItem(LANGUAGE_KEY, preference);
+    saveStoredString(LANGUAGE_KEY, preference);
   }
 }
 

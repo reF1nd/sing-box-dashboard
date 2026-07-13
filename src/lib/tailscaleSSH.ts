@@ -17,7 +17,7 @@ export interface SSHSessionOptions {
   hostKeys: string[];
 }
 
-const SSH_PREFS_KEY = "sing-box-dashboard.tailscale-ssh";
+const SSH_PREFS_KEY = "tailscale-ssh";
 export const SSH_DEFAULT_USERNAME = "root";
 export const SSH_DEFAULT_TERMINAL_TYPE = "xterm-256color";
 
@@ -59,7 +59,7 @@ export interface TerminalConfig {
   fontSize: number;
 }
 
-const TERMINAL_CONFIG_KEY = "sing-box-dashboard.terminal-config";
+const TERMINAL_CONFIG_KEY = "terminal-config";
 export const TERMINAL_CONFIG_EVENT = "sing-box-dashboard:terminal-config";
 
 export const DEFAULT_TERMINAL_FONT_SIZE = 13;

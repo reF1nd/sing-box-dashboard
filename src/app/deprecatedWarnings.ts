@@ -1,6 +1,6 @@
 import { loadStoredJson, saveStoredJson } from "../lib/storage";
 
-const DISABLE_DEPRECATED_WARNINGS_KEY = "sing-box-dashboard.disable-deprecated-warnings";
+const DISABLE_DEPRECATED_WARNINGS_KEY = "disable-deprecated-warnings";
 
 export function loadDisableDeprecatedWarnings(): boolean {
   return loadStoredJson(DISABLE_DEPRECATED_WARNINGS_KEY) === true;

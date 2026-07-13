@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 import type { DaemonApi } from "../api/daemon";
+import { loadStoredString, removeStoredValue, saveStoredString } from "../lib/storage";
 
 export const ApiContext = createContext<DaemonApi | null>(null);
 
@@ -85,10 +86,10 @@ export function useIsMobile(): boolean {
 
 export type ThemePreference = "auto" | "light" | "dark";
 
-const THEME_KEY = "sing-box-dashboard.theme";
+const THEME_KEY = "theme";
 
 export function loadThemePreference(): ThemePreference {
-  const value = localStorage.getItem(THEME_KEY);
+  const value = loadStoredString(THEME_KEY);
   if (value === "light" || value === "dark") {
     return value;
   }
@@ -96,7 +97,7 @@ export function loadThemePreference(): ThemePreference {
 }
 
 export function saveThemePreference(preference: ThemePreference) {
-  localStorage.setItem(THEME_KEY, preference);
+  saveStoredString(THEME_KEY, preference);
 }
 
 export function applyTheme(preference: ThemePreference) {
@@ -168,10 +169,10 @@ export function normalizeAccentColor(value: string): string | null {
   return null;
 }
 
-const ACCENT_KEY = "sing-box-dashboard.accent";
+const ACCENT_KEY = "accent";
 
 export function loadAccentPreference(): AccentPreference {
-  const value = localStorage.getItem(ACCENT_KEY);
+  const value = loadStoredString(ACCENT_KEY);
   if (!value) {
     return "default";
   }
@@ -183,9 +184,9 @@ export function loadAccentPreference(): AccentPreference {
 
 export function saveAccentPreference(preference: AccentPreference) {
   if (preference === "default") {
-    localStorage.removeItem(ACCENT_KEY);
+    removeStoredValue(ACCENT_KEY);
   } else {
-    localStorage.setItem(ACCENT_KEY, preference);
+    saveStoredString(ACCENT_KEY, preference);
   }
 }
 
