@@ -419,6 +419,10 @@ function DesktopApp(props: { host: DesktopHost }) {
   const host = props.host;
   const state = useAppState(host);
   const connection = useDaemonConnection(host);
+  const connectionResolvedOnce = useRef(false);
+  if (connection.phase !== "connecting") {
+    connectionResolvedOnce.current = true;
+  }
   const [activeId, setActiveId] = useState<string>(
     () => localStorage.getItem(DESKTOP_ACTIVE_KEY) ?? DESKTOP_LOCAL_SERVER.id,
   );
@@ -461,6 +465,15 @@ function DesktopApp(props: { host: DesktopHost }) {
   );
 
   if (local && connection.phase !== "connected") {
+    if (!connectionResolvedOnce.current) {
+      return (
+        <div className={styles.desktopRoot}>
+          <div className={styles.desktopConnectingView}>
+            <Spinner className={styles.connectingSpinner} />
+          </div>
+        </div>
+      );
+    }
     return (
       <div className={styles.desktopRoot}>
         <DesktopToolbar window picker={picker} />
@@ -651,12 +664,16 @@ function ShellContent(props: ShellProps & { onRetry: () => void }) {
   }
 
   if (serviceStatus.data.status === null) {
+    if (host !== null) {
+      return (
+        <div className={styles.desktopConnectingView}>
+          <Spinner className={styles.connectingSpinner} />
+        </div>
+      );
+    }
     return (
       <div className={styles.connectingView}>
-        <Brand
-          className={styles.connectingBrand}
-          product={host !== null ? null : undefined}
-        />
+        <Brand className={styles.connectingBrand} />
         <Spinner className={styles.connectingSpinner} />
       </div>
     );
