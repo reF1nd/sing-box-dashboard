@@ -9,6 +9,7 @@ import { showError } from "./errorStore";
 export type DaemonConnectionPhase =
   | "connecting"
   | "connected"
+  | "owned-by-other-user"
   | "unavailable"
   | "not-installed"
   | "not-running"
