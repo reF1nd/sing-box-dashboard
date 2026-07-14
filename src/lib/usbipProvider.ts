@@ -33,8 +33,6 @@ export interface ProvidedDevice {
 
 const DETACHED_BUS_ID_TTL_MS = 10_000;
 
-// The identity fields used to recognise the "same" physical device across a
-// disconnect/reconnect — WebUSB hands out a fresh USBDevice object each replug.
 type UsbDeviceIdentity = Pick<
   USBDevice,
   "vendorId" | "productId" | "serialNumber" | "manufacturerName" | "productName"

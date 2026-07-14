@@ -61,8 +61,6 @@ export function DetailSection(props: { title?: ReactNode; accessory?: ReactNode;
 
 export type BadgeTone = DelayTone | "danger" | "info" | "accent";
 
-// "neutral" is the default styling (no modifier class); every other tone maps
-// to a same-named class. Returns false (not "") so cx drops it cleanly.
 function toneClass<T extends string>(tone: T | undefined): T | false {
   return tone && tone !== "neutral" ? tone : false;
 }
@@ -851,9 +849,6 @@ function useShowModal(focusSelf = false) {
     openModalCount += 1;
     document.documentElement.dataset.scrim = "";
     if (focusSelf) {
-      // showModal() moves focus to the first focusable control, leaving it
-      // visibly highlighted. Focus the dialog itself instead so nothing starts
-      // out selected. (Dialogs that want an initial focus use autoFocus.)
       dialog.focus();
     }
     return () => {
@@ -867,8 +862,6 @@ function useShowModal(focusSelf = false) {
   return ref;
 }
 
-// A click on the ::backdrop has the dialog element as its target, at
-// coordinates outside the dialog's box; clicks on its own padding target it too.
 function closeOnBackdropClick(event: React.MouseEvent<HTMLDialogElement>, onClose: () => void) {
   if (event.target !== event.currentTarget) {
     return;

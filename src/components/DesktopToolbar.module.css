@@ -11,8 +11,6 @@
   -webkit-app-region: drag;
 }
 
-/* Insets clearing the macOS traffic lights (hiddenInset) and the Windows
-   caption controls (titleBarOverlay). */
 :global(body[data-platform="darwin"]) .toolbar-window {
   --titlebar-inset: 96px;
 

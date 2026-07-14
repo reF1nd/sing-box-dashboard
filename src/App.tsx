@@ -219,9 +219,6 @@ function routeFromHash(): Route {
   }
 }
 
-// Tools subpages that require the service to be started (tailscale, usbip).
-// Unlike network-quality/stun, they fall back to the tools list rather than
-// overview when the service stops.
 function isStartedOnlyToolsSubpage(page: string): boolean {
   return page.startsWith("tools/tailscale") || page.startsWith("tools/usbip");
 }
@@ -556,7 +553,7 @@ function Shell(props: ShellProps) {
       host !== null && props.desktopLocal === true
         ? new DaemonApi(props.server, host.transport)
         : new DaemonApi(props.server),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- generation is an intentional extra dependency; bumping it is what forces the recreation
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [props.server, host, props.desktopLocal, generation],
   );
   return (

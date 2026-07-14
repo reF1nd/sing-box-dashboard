@@ -18,9 +18,6 @@ export interface TerminalThemeEntry {
 export const DEFAULT_TERMINAL_FONT = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
 
 // Default themes, matching sing-box-for-apple (light: Alabaster, dark: Afterglow).
-// Their palettes are inlined here — copied verbatim from the catalog — so the
-// terminal renders the default flash-free before the lazy catalog chunk loads.
-// Both also exist in the full catalog, so they show up in the picker normally.
 const ALABASTER: TerminalThemeEntry = {
   name: DEFAULT_LIGHT_THEME_NAME,
   isDark: false,
@@ -77,7 +74,6 @@ const AFTERGLOW: TerminalThemeEntry = {
 
 const SEED_THEMES: TerminalThemeEntry[] = [ALABASTER, AFTERGLOW];
 
-// The app writes its resolved appearance to <html data-theme="light|dark">.
 export function currentScheme(): Scheme {
   return document.documentElement.dataset.theme === "light" ? "light" : "dark";
 }
@@ -86,8 +82,6 @@ function fallbackTheme(scheme: Scheme): ITheme {
   return scheme === "dark" ? AFTERGLOW.theme : ALABASTER.theme;
 }
 
-// Themes whose colours are known synchronously (the two defaults), so the first
-// paint never waits on the catalog.
 export function seedTheme(name: string): TerminalThemeEntry | undefined {
   return SEED_THEMES.find((entry) => entry.name === name);
 }
@@ -102,7 +96,7 @@ export function parseCustomTheme(json: string): ITheme | null {
       return value as ITheme;
     }
   } catch {
-    // fall through
+    return null;
   }
   return null;
 }
@@ -115,9 +109,6 @@ function customJson(config: TerminalConfig, scheme: Scheme): string {
   return scheme === "dark" ? config.darkThemeCustom : config.lightThemeCustom;
 }
 
-// Best-effort resolution without touching the (lazy) catalog: handles custom
-// JSON and the seeded default themes, otherwise returns the matching default.
-// Used for the synchronous initial render so the common cases never flash.
 export function resolveThemeSync(config: TerminalConfig, scheme: Scheme): ITheme {
   const name = themeName(config, scheme);
   if (name === "") {
@@ -126,8 +117,6 @@ export function resolveThemeSync(config: TerminalConfig, scheme: Scheme): ITheme
   return seedTheme(name)?.theme ?? fallbackTheme(scheme);
 }
 
-// Full resolution: lazily loads the catalog only when a non-seeded named theme
-// is selected, keeping the 500+ theme chunk out of the default bundle.
 export async function resolveTheme(config: TerminalConfig, scheme: Scheme): Promise<ITheme> {
   const name = themeName(config, scheme);
   if (name === "" || seedTheme(name)) {

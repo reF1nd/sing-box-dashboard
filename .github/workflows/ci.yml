@@ -9,7 +9,6 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      # The sing-box submodule provides the .proto source for pnpm generate.
       - uses: actions/checkout@v4
         with:
           submodules: true

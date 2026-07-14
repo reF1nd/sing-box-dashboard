@@ -1,6 +1,3 @@
-// Lazily-loaded theme catalog. Import this module via dynamic `import()` only
-// (e.g. from the theme picker), so the generated 500+ theme data stays out of
-// the main bundle.
 import type { TerminalThemeEntry } from "./terminalTheme";
 import { GENERATED_TERMINAL_THEMES } from "./terminalThemes.generated";
 

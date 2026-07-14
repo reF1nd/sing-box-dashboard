@@ -1,31 +1,3 @@
-/*
- * Global design-system stylesheet. Two tiers live here, referenced by bare
- * class strings (never CSS-module-scoped):
- *
- *   1. PRIMITIVES — owned by a component in components/ui.tsx (and Icon.tsx).
- *      A consumer renders <Button>/<Badge>/<StateDot>/<Card>/<Select> etc.; it
- *      never types these class strings, and a primitive's variants are typed
- *      props (e.g. <Button variant="danger">), not ad-hoc classes. Examples:
- *      button, icon-button, badge, state-dot, card, menu, input, select,
- *      switch, segmented, spinner, field, banner, dialog, drawer.
- *
- *   2. LAYOUT UTILITIES — view-shell scaffolding used as raw class strings
- *      across views: page, page-full, page-header, page-title, settings-row,
- *      settings-stack, list-section-title, row-actions, hint, back-button,
- *      actions. These have no state/variants of their own.
- *
- * Rules:
- *   - State/variant classes belong to whoever OWNS the element. A primitive's
- *     variants are typed props here; a VIEW element's state is a CSS-module
- *     class in that view's *.module.css (never a bare string + :global).
- *   - A CSS module reaches into this layer only via :global(...) to compose a
- *     primitive or utility it renders, or to position one through a className
- *     prop. The Icon `.icon` hook is the canonical :global target.
- *   - Order matters: some grouped/:active rules rely on source order (the
- *     no-descending-specificity stylelint rule is intentionally off), so keep
- *     related rules together rather than reordering by tier.
- */
-
 .text-large-title,
 .page-title {
   font-family: var(--font-serif);
@@ -926,7 +898,7 @@ button.settings-row:focus-visible {
   display: inline-flex;
   overflow: hidden;
 
-  /* stylelint-disable color-no-hex -- literal color wheel */
+  /* stylelint-disable color-no-hex */
   background: conic-gradient(
     #ff5257,
     #ffc600,

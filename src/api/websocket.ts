@@ -68,8 +68,6 @@ export class GrpcWebSocketStream<Req extends DescMessage, Res extends DescMessag
   send(message: MessageInitShape<Req>) {
     const data = toBinary(this.options.requestSchema, create(this.options.requestSchema, message));
     const frame = new Uint8Array(6 + data.length);
-    // frame[0]: websocket payload marker (0 = data); frame[1..5]: gRPC frame
-    // header (flag + big-endian length).
     frame[2] = (data.length >>> 24) & 0xff;
     frame[3] = (data.length >>> 16) & 0xff;
     frame[4] = (data.length >>> 8) & 0xff;
@@ -156,7 +154,7 @@ export class GrpcWebSocketStream<Req extends DescMessage, Res extends DescMessag
     try {
       message = decodeURIComponent(message);
     } catch {
-      // ignore
+      message = headers["grpc-message"] ?? "";
     }
     this.status = { code, message };
     this.end(this.status);

@@ -57,15 +57,13 @@ export async function diagnoseConnection(
     return "cors-blocked";
   } catch {
     if (location.protocol === "https:" && serverUrl.startsWith("http:")) {
-      let loopback = false;
       try {
-        loopback = isLoopbackHost(new URL(serverUrl).hostname);
+        return isLoopbackHost(new URL(serverUrl).hostname)
+          ? "mixed-content-or-unreachable"
+          : "mixed-content";
       } catch {
-        // ignore
+        return "mixed-content";
       }
-      // Remote hosts: every browser blocks https → http before the request
-      // leaves. Loopback: Chrome permits the mix, Safari blocks it.
-      return loopback ? "mixed-content-or-unreachable" : "mixed-content";
     }
     return "unreachable";
   } finally {

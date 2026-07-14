@@ -11,9 +11,6 @@ import {
 import { Icon } from "./Icon";
 import styles from "./TerminalSymbolBar.module.css";
 
-// Keep in sync with the `.terminal-symbol-bar` height in TerminalSymbolBar.module.css; the
-// terminal host reserves this much bottom padding so the cursor row stays
-// visible above the bar.
 export const SYMBOL_BAR_HEIGHT = 46;
 
 const SPECIAL_ARIA: Record<SpecialKeyId, MessageKey> = {
@@ -105,8 +102,6 @@ function SymbolButton(props: {
       className={props.className}
       aria-label={props.ariaLabel}
       aria-pressed={props.ariaPressed}
-      // Prevent the tap from blurring the terminal (which would dismiss the
-      // soft keyboard); run the action on click instead.
       onPointerDown={(event) => event.preventDefault()}
       onClick={props.onPress}
     >

@@ -26,9 +26,6 @@ type NavigationGuard = (proceed: () => void) => void;
 
 let navigationGuard: NavigationGuard | null = null;
 
-// Registers a guard consulted by navigate(). Returns an unregister that clears
-// the guard only if it's still the current one, so a stale cleanup (e.g. a
-// StrictMode double-mount) can't clobber a guard registered afterwards.
 function registerNavigationGuard(guard: NavigationGuard): () => void {
   navigationGuard = guard;
   return () => {
@@ -49,8 +46,6 @@ export function navigate(path: string) {
   }
 }
 
-// Blocks in-app navigation (and warns on tab close) while `active`, invoking
-// `onBlock` with a `proceed` callback that runs the deferred navigation.
 export function useNavigationGuard(active: boolean, onBlock: NavigationGuard) {
   const handler = useRef(onBlock);
   handler.current = onBlock;
@@ -116,13 +111,7 @@ export function applyTheme(preference: ThemePreference) {
   // iOS 26 Safari ignores theme-color and tints the status bar from the
   // .statusbar-tint probe (see globals.css). It only samples a fixed element
   // when a new node enters the render tree: color changes on a registered
-  // element go unnoticed, and removals are dropped too (WebKit bug 300965),
-  // so display-toggling the same node nets out to nothing. Swap in a fresh
-  // clone, and since even that may coalesce into a no-op if WebKit diffs the
-  // fixed-element set by shape rather than node identity, also flash a twin
-  // probe on top for two frames — the same insert-then-remove sequence as
-  // the drawer scrim, which provably re-tints; its dropped removal leaves
-  // the new color registered, which is exactly the color we want shown.
+  // element go unnoticed, and removals are dropped too (WebKit bug 300965).
   const tint = document.getElementById("statusbar-tint");
   if (tint) {
     const fresh = tint.cloneNode(true) as HTMLElement;

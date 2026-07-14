@@ -256,9 +256,7 @@
     }
 
   .mobile-topbar {
-      /* iOS tints the status bar from the page's top pixels, so the topbar
-         must stay undimmed (above the scrim, below the drawer) while the
-         drawer is open. */
+      /* iOS tints the status bar from the page's top pixels. */
       position: relative;
       z-index: var(--z-topbar);
       display: flex;

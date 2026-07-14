@@ -30,11 +30,10 @@ export function formatVidPid(vendorId: number, productId: number): string {
 
 type DescriptorInit = MessageInitShape<typeof USBDeviceDescriptorSchema>;
 
-// Return values are the Linux USB/IP USB_SPEED_* constants.
 function inferSpeed(device: USBDevice): number {
-  if (device.usbVersionMajor >= 3) return 5; // super-speed
-  if (device.usbVersionMajor >= 2) return 3; // high-speed
-  return 2; // full-speed
+  if (device.usbVersionMajor >= 3) return 5;
+  if (device.usbVersionMajor >= 2) return 3;
+  return 2;
 }
 
 export function buildDescriptor(device: USBDevice, deviceId: string): DescriptorInit {
@@ -86,12 +85,10 @@ export interface UrbResult {
   inData: Uint8Array;
 }
 
-// Linux URB completion status conventions (negative errno) the usbip-server
-// translates back to the remote client.
 const URB_OK = 0;
-const URB_EPIPE = -32; // stalled endpoint
-const URB_EOVERFLOW = -75; // babble / buffer overrun
-const URB_EPROTO = -71; // transport or protocol failure
+const URB_EPIPE = -32;
+const URB_EOVERFLOW = -75;
+const URB_EPROTO = -71;
 
 const EMPTY = new Uint8Array(0);
 
@@ -113,18 +110,10 @@ function toBytes(data: DataView | undefined): Uint8Array {
   return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
 }
 
-// Protobuf decodes `bytes` to Uint8Array<ArrayBufferLike>, but WebUSB transfer
-// methods require an ArrayBuffer-backed view. Re-wrap into a plain ArrayBuffer.
 function outBuffer(data: Uint8Array): Uint8Array<ArrayBuffer> {
   return new Uint8Array(data);
 }
 
-// Standard control requests the importing kernel issues during enumeration and
-// that a client issues when it opens the interface. WebUSB reserves these for
-// its own high-level methods and rejects them with a SecurityError ("The
-// transfer was not allowed") when sent through controlTransferOut, so forwarding
-// them raw makes the kernel's SET_CONFIGURATION fail and the remote device drop
-// off the bus. Translate each into its WebUSB equivalent instead.
 const USB_REQUEST_CLEAR_FEATURE = 0x01;
 const USB_REQUEST_SET_CONFIGURATION = 0x09;
 const USB_REQUEST_SET_INTERFACE = 0x0b;
@@ -176,9 +165,6 @@ async function applyConfiguration(device: USBDevice, configurationValue: number)
 
 export async function executeUrb(device: USBDevice, req: USBURBRequest): Promise<UrbResult> {
   try {
-    // Bulk/interrupt URBs carry an all-zero 8-byte setup field over the wire as
-    // well, so the transfer type must be keyed off the endpoint number, not the
-    // setup length.
     const endpointNumber = req.endpoint & 0x0f;
     if (endpointNumber === 0) {
       const params = parseSetup(req.setup);

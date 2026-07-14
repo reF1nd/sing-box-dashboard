@@ -79,7 +79,7 @@ export function ProfileQRSDialog(props: {
     return () => {
       stale = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once per profile
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.profile.id]);
 
   const fountain = useMemo(

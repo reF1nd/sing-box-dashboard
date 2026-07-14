@@ -2,17 +2,10 @@ import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 
-// Transcodes the mbadolato/iTerm2-Color-Schemes (MIT) "windowsterminal" schemes
-// into xterm.js ITheme objects. Reads from the vendored submodule by default;
-// pass a path to a `windowsterminal` directory to override. Run via
-// `pnpm generate` (after `git submodule update --init`).
-
 const srcDir =
   process.argv[2] ??
   fileURLToPath(new URL("../vendor/iterm2-color-schemes/windowsterminal", import.meta.url));
 
-// Windows Terminal scheme key -> xterm ITheme key. WT names the magenta slot
-// "purple"; everything else lines up one-to-one.
 const ANSI = {
   black: "black",
   red: "red",

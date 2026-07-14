@@ -129,8 +129,6 @@ a.nav-line {
   margin-inline-end: var(--space-8);
 }
 
-/* The design system doesn't expose icon-button sizing, so the compact peer
-   row scopes the override to its own menu. */
 .peer-menu :global(.icon-button) {
   width: 26px;
   height: 26px;

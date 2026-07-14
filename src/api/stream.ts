@@ -34,8 +34,6 @@ export function isTerminalCode(code: Code | undefined): boolean {
   );
 }
 
-// Notifying useSyncExternalStore synchronously on every message trips React's
-// "Maximum update depth exceeded" under a burst, so the fan-out is coalesced.
 const scheduleFlush = (callback: () => void): number =>
   setTimeout(callback, 0) as unknown as number;
 

@@ -36,10 +36,6 @@
   min-height: 0;
 }
 
-/* Terminal page chrome. The page root carries the global `terminal-page`
-   marker (`page page-full terminal-page`) so body-level `:has()` and xterm
-   vendor selectors can hook the feature; these rules previously lived in
-   globals.css and are co-located with the terminal view here. */
 :global(.page.terminal-page) {
   --scrollbar-thumb: var(--scrollbar-thumb-on-dark);
   --scrollbar-thumb-hover: var(--scrollbar-thumb-hover-on-dark);

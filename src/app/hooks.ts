@@ -49,16 +49,8 @@ export function useStreamOutage(
   return outage;
 }
 
-// Tracks the on-screen keyboard height via the visual viewport so the terminal
-// symbol bar can sit just above the soft keyboard. Returns 0 when no keyboard
-// is shown, or on platforms without a visualViewport (desktop/old browsers).
-//
-// Height is layout viewport - visual viewport, deliberately WITHOUT offsetTop,
-// and recomputed only on `resize` (keyboard show/hide) — never on `scroll`.
-// The keyboard is anchored to the bottom of the layout viewport, so its height
-// is constant while the page rubber-band scrolls; folding in offsetTop or
-// reacting to scroll would make a `position: fixed` bar drift away from the
-// keyboard and flicker out on scroll-up.
+// Mobile visualViewport height stays fixed while the page rubber-band scrolls;
+// offsetTop changes even though the keyboard remains anchored to the layout viewport.
 export function useKeyboardInset(): number {
   const [inset, setInset] = useState(0);
   useEffect(() => {
@@ -77,9 +69,6 @@ export function useKeyboardInset(): number {
   return inset;
 }
 
-// Reads the terminal config from storage and re-renders when it changes, both
-// within this window (custom event) and in the desktop terminal popup (the
-// native cross-window `storage` event).
 export function useTerminalConfig(): TerminalConfig {
   const [config, setConfig] = useState<TerminalConfig>(loadTerminalConfig);
   useEffect(() => {

@@ -493,8 +493,6 @@ function TerminalSession(props: {
     terminalRef.current?.focus();
   }, [props.active]);
 
-  // Track the app's effective light/dark appearance (written to
-  // <html data-theme>) so the terminal can pick the matching theme slot.
   useEffect(() => {
     const observer = new MutationObserver(() => setScheme(currentScheme()));
     observer.observe(document.documentElement, {
@@ -505,8 +503,6 @@ function TerminalSession(props: {
     return () => observer.disconnect();
   }, []);
 
-  // Apply font and theme changes to the live terminal without recreating it
-  // (which would tear down the SSH session).
   useEffect(() => {
     const terminal = terminalRef.current;
     if (!terminal) {
@@ -571,9 +567,6 @@ function TerminalSession(props: {
     terminalRef.current?.focus();
   };
 
-  // On mobile the bar is purely keyboard-gated: it appears above the keyboard
-  // and hides when there is no keyboard (never resting at the bottom). The
-  // "always show" toggle only adds the desktop case, where there is no keyboard.
   const keyboardVisible = isMobile && keyboardInset > 100;
   const barVisible = props.active && (keyboardVisible || (symbolBarAlwaysShow && !isMobile));
   const hostStyle: CSSProperties = {};

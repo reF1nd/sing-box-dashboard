@@ -462,8 +462,6 @@ export function PreferencesView(props: {
 
 const FONT_SIZES = [8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 28, 32];
 
-// Common monospace families; the live terminal appends a generic monospace
-// fallback, so unavailable choices degrade gracefully.
 const FONT_FAMILIES = [
   "Menlo",
   "Monaco",
@@ -496,7 +494,6 @@ function ThemeSchemeSection(props: {
   const { scheme, name, custom } = props;
   const isDark = scheme === "dark";
   const isCustom = name === "";
-  // Remember the last named theme so toggling "Custom" off restores it.
   const remembered = useRef(name || (isDark ? DEFAULT_DARK_THEME_NAME : DEFAULT_LIGHT_THEME_NAME));
   if (!isCustom) {
     remembered.current = name;
@@ -677,7 +674,6 @@ export function TerminalThemeEditorView(props: { scheme: Scheme }) {
 
 function ThemePreview({ theme }: { theme: TerminalThemeEntry["theme"] }) {
   const fg = theme.foreground;
-  // ANSI slots are absent on the built-in themes; fall back to the foreground.
   const color = (value?: string) => value ?? fg;
   return (
     <span className={styles.themePreview} style={{ background: theme.background, color: fg }}>

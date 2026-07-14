@@ -1,5 +1,3 @@
-/* Width override for the shared `.menu` primitive; the `:global(.menu)`
-   qualifier matches its specificity so the override wins over `.menu.align-right`. */
 :global(.menu).usbip-add-menu {
   min-width: 240px;
   max-width: min(320px, 80vw);

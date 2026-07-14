@@ -1,10 +1,3 @@
-/*
- * Global foundation only: design tokens (:root + theme/accent overrides), the
- * CSS reset, base element styles, and keyframes. No component or feature
- * styles live here — primitives and layout utilities are in shared.css, and
- * feature/view styles live in their own *.module.css (e.g. the terminal-page
- * chrome lives in TerminalView.module.css).
- */
 @font-face {
   font-family: "Noto Color Emoji";
   font-style: normal;

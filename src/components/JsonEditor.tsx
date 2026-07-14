@@ -156,7 +156,7 @@ export function JsonEditor(props: {
       viewRef.current = null;
       view.destroy();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- created once per mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useImperativeHandle(

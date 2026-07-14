@@ -608,7 +608,7 @@ function ProfileContentDialog(props: {
         window.clearTimeout(checkTimer.current);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once per profile
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.profile.id]);
 
   const edit = (value: string, undoAvailable: boolean, redoAvailable: boolean) => {
@@ -942,7 +942,7 @@ function ProfileImportDialog(props: {
         showError(error);
         props.onClose();
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- decode once per request
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.request]);
 
   if (isConfiguration) {
