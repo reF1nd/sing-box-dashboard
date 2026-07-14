@@ -32,7 +32,7 @@
 
 .text-headline,
 .card-header,
-.field > label {
+.field-label {
   font-size: var(--text-base);
   font-weight: var(--weight-semibold);
 }
@@ -584,7 +584,7 @@ a.menu-item {
   margin-bottom: var(--space-12);
 }
 
-.field > label {
+.field-label {
   color: var(--text-secondary);
 }
 

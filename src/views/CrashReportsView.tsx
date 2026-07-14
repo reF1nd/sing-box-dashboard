@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { formatAbbreviatedDateTime, formatDateTime } from "../api/format";
+import { formatDateTime } from "../api/format";
 import { navigate } from "../app/context";
 import {
   useLocalDesktopHost,
@@ -11,7 +11,6 @@ import {
 } from "../app/desktop";
 import { showError } from "../app/errorStore";
 import { useI18n } from "../app/i18n";
-import type { Translate } from "../app/i18n";
 import { Icon } from "../components/Icon";
 import { PageHeader } from "../components/PageHeader";
 import {
@@ -30,6 +29,7 @@ import {
 import { cx } from "../lib/cx";
 import styles from "./CrashReportsView.module.css";
 import { ToolsPageHeader } from "./ToolsView";
+import { crashReportFileDisplayName, crashReportTitle } from "./reportFormat";
 
 function reportPath(name: string, crashedAt: number | null): string {
   const path = `tools/crash-reports/${encodeURIComponent(name)}`;
@@ -39,25 +39,6 @@ function reportPath(name: string, crashedAt: number | null): string {
 function reportFilePath(name: string, file: string, crashedAt: number | null): string {
   const path = `tools/crash-reports/${encodeURIComponent(name)}/${encodeURIComponent(file)}`;
   return crashedAt !== null ? `${path}?at=${crashedAt}` : path;
-}
-
-export function crashReportTitle(name: string, crashedAt: number | null, language: string): string {
-  return crashedAt !== null ? formatAbbreviatedDateTime(crashedAt, language) : name;
-}
-
-export function crashReportFileDisplayName(name: string, t: Translate): string {
-  switch (name) {
-    case "metadata.json":
-      return t("Metadata");
-    case "native.log":
-      return t("Crash Report");
-    case "go.log":
-      return t("Go Crash Log");
-    case "configuration.json":
-      return t("Configuration");
-    default:
-      return name;
-  }
 }
 
 export function CrashReportListView() {
@@ -122,6 +103,7 @@ function CrashReportListContent({ host }: { host: DesktopHost }) {
               ) : (
                 reports.map((report) => (
                   <button
+                    type="button"
                     key={report.name}
                     className={cx("nav-row", styles.reportRow)}
                     onClick={() => navigate(reportPath(report.name, report.crashedAt))}
@@ -197,7 +179,7 @@ function CrashReportDetailContent({
       .read(name)
       .then((value) => {
         if (!stale) {
-          setFiles(value);
+          setFiles(() => value);
         }
         host.reports.crash.markRead(name).catch(showError);
       })
@@ -253,6 +235,7 @@ function CrashReportDetailContent({
                   </div>
                 ) : (
                   <button
+                    type="button"
                     key={file.name}
                     className="nav-row"
                     onClick={() => navigate(reportFilePath(name, file.name, crashedAt))}
@@ -432,9 +415,13 @@ export function MetadataCard(props: { content: string }) {
   try {
     const parsed: unknown = JSON.parse(props.content);
     if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
-      entries = Object.entries(parsed)
-        .map(([key, value]): [string, string] => [key, value === null ? "" : String(value)])
-        .filter(([, value]) => value !== "");
+      entries = Object.entries(parsed).reduce<[string, string][]>((result, [key, value]) => {
+        const text = value === null ? "" : String(value);
+        if (text !== "") {
+          result.push([key, text]);
+        }
+        return result;
+      }, []);
     }
   } catch {
     return <pre className={styles.fileContent}>{props.content}</pre>;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import {
   loadServersState,
@@ -58,8 +58,6 @@ import {
   CrashReportDetailView,
   CrashReportFileView,
   CrashReportListView,
-  crashReportFileDisplayName,
-  crashReportTitle,
 } from "./views/CrashReportsView";
 import { GroupsView } from "./views/GroupsView";
 import { LogsView } from "./views/LogsView";
@@ -67,9 +65,13 @@ import {
   OOMReportDetailView,
   OOMReportFileView,
   OOMReportListView,
+} from "./views/OOMReportsView";
+import {
+  crashReportFileDisplayName,
+  crashReportTitle,
   oomReportFileDisplayName,
   oomReportTitle,
-} from "./views/OOMReportsView";
+} from "./views/reportFormat";
 import { OverviewView } from "./views/OverviewView";
 import { ImportProfileFileDialog, ImportRemoteProfileDialog } from "./views/ProfileViews";
 import {
@@ -124,8 +126,8 @@ function decodeSegment(segment: string): string {
   }
 }
 
-function routeFromHash(): Route {
-  const hash = location.hash.replace(/^#\/?/, "");
+function routeFromHash(locationHash: string): Route {
+  const hash = locationHash.replace(/^#\/?/, "");
   const queryIndex = hash.indexOf("?");
   const query = new URLSearchParams(queryIndex >= 0 ? hash.slice(queryIndex + 1) : "");
   const segments = (queryIndex >= 0 ? hash.slice(0, queryIndex) : hash)
@@ -219,6 +221,15 @@ function routeFromHash(): Route {
   }
 }
 
+function subscribeLocationHash(onChange: () => void): () => void {
+  window.addEventListener("hashchange", onChange);
+  return () => window.removeEventListener("hashchange", onChange);
+}
+
+function locationHashSnapshot(): string {
+  return location.hash;
+}
+
 function isStartedOnlyToolsSubpage(page: string): boolean {
   return page.startsWith("tools/tailscale") || page.startsWith("tools/usbip");
 }
@@ -301,7 +312,12 @@ function useAppState(desktop: DesktopHost | null = null) {
   );
   const [theme, setTheme] = useState<ThemePreference>(() => loadThemePreference());
   const [accent, setAccent] = useState<AccentPreference>(() => loadAccentPreference());
-  const [route, setRoute] = useState<Route>(() => routeFromHash());
+  const locationHash = useSyncExternalStore(
+    subscribeLocationHash,
+    locationHashSnapshot,
+    locationHashSnapshot,
+  );
+  const route = useMemo(() => routeFromHash(locationHash), [locationHash]);
   const serversReady = useRef(desktop === null);
 
   useEffect(() => {
@@ -325,7 +341,7 @@ function useAppState(desktop: DesktopHost | null = null) {
       .then((storedState) => {
         if (!stale) {
           serversReady.current = true;
-          setServersState(storedState);
+          setServersState(() => storedState);
         }
       })
       .catch(showError);
@@ -333,12 +349,6 @@ function useAppState(desktop: DesktopHost | null = null) {
       stale = true;
     };
   }, [desktop]);
-
-  useEffect(() => {
-    const onHashChange = () => setRoute(routeFromHash());
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
-  }, []);
 
   const updateServers = (next: ServersState) => {
     if (desktop === null) {
@@ -350,20 +360,20 @@ function useAppState(desktop: DesktopHost | null = null) {
       }
       void desktop.servers.save(next).catch(showError);
     }
-    setServersState(next);
+    setServersState(() => next);
   };
 
   const updateTheme = (next: ThemePreference) => {
     saveThemePreference(next);
-    setTheme(next);
+    setTheme(() => next);
   };
 
   const updateAccent = (next: AccentPreference) => {
     saveAccentPreference(next);
-    setAccent(next);
+    setAccent(() => next);
   };
 
-  return { serversState, updateServers, theme, updateTheme, accent, updateAccent, route, setRoute };
+  return { serversState, updateServers, theme, updateTheme, accent, updateAccent, route };
 }
 
 function WebApp() {
@@ -372,13 +382,11 @@ function WebApp() {
   const activeServer =
     state.serversState.servers.find((server) => server.id === state.serversState.activeId) ?? null;
 
-  const setRoute = state.setRoute;
   useEffect(() => {
     if (!activeServer && location.hash !== "") {
       history.replaceState(null, "", location.pathname + location.search);
-      setRoute(routeFromHash());
     }
-  }, [activeServer, setRoute]);
+  }, [activeServer]);
 
   if (!activeServer) {
     return (
@@ -418,9 +426,13 @@ function DesktopApp(props: { host: DesktopHost }) {
   const state = useAppState(host);
   const connection = useDaemonConnection(host);
   const connectionResolvedOnce = useRef(false);
-  if (connection.phase !== "connecting") {
-    connectionResolvedOnce.current = true;
-  }
+  const connectionHasResolved =
+    connection.phase !== "connecting" || connectionResolvedOnce.current;
+  useEffect(() => {
+    if (connection.phase !== "connecting") {
+      connectionResolvedOnce.current = true;
+    }
+  }, [connection.phase]);
   const [activeId, setActiveId] = useState<string>(
     () => loadStoredString(DESKTOP_ACTIVE_KEY) ?? DESKTOP_LOCAL_SERVER.id,
   );
@@ -431,7 +443,7 @@ function DesktopApp(props: { host: DesktopHost }) {
 
   const selectServer = (id: string) => {
     saveStoredString(DESKTOP_ACTIVE_KEY, id);
-    setActiveId(id);
+    setActiveId(() => id);
   };
 
   const servers = state.serversState.servers;
@@ -463,7 +475,7 @@ function DesktopApp(props: { host: DesktopHost }) {
   );
 
   if (local && connection.phase !== "connected") {
-    if (!connectionResolvedOnce.current) {
+    if (!connectionHasResolved) {
       return (
         <div className={styles.desktopRoot}>
           <div className={styles.desktopConnectingView}>
@@ -691,6 +703,7 @@ function ShellContent(props: ShellProps & { onRetry: () => void }) {
 
   const navItem = (page: string, title: string, icon: IconName, active: boolean) => (
     <button
+      type="button"
       key={page}
       className={cx(styles.navItem, active && styles.active)}
       onClick={() => {
@@ -782,7 +795,14 @@ function ShellContent(props: ShellProps & { onRetry: () => void }) {
             <div className={styles.mobileTopbarBrand}>sing-box</div>
           </header>
         )}
-        {menuOpen && <div className={styles.sidebarScrim} onClick={() => setMenuOpen(false)} />}
+        {menuOpen && (
+          <button
+            type="button"
+            className={styles.sidebarScrim}
+            aria-label={t("Close")}
+            onClick={() => setMenuOpen(false)}
+          />
+        )}
         {host !== null ? (
           <nav className={styles.sidebar}>
             <div className={styles.sidebarTitlebar} />
@@ -874,7 +894,7 @@ function ServerPicker(props: {
 
   return (
     <div className={styles.serverPicker} ref={ref}>
-      <button className={styles.serverPickerButton} aria-expanded={open} onClick={() => setOpen(!open)}>
+      <button type="button" className={styles.serverPickerButton} aria-expanded={open} onClick={() => setOpen(!open)}>
         <span className={styles.serverPickerText}>
           <span className={styles.serverPickerLine}>
             <StateDot tone={props.connected ? "good" : undefined} className={styles.serverDot} />
@@ -888,6 +908,7 @@ function ServerPicker(props: {
         <div className="menu open-up">
           {servers.map((server) => (
             <button
+              type="button"
               key={server.id}
               className="menu-item"
               onClick={() => {
@@ -903,6 +924,7 @@ function ServerPicker(props: {
           ))}
           <div className="menu-divider" />
           <button
+            type="button"
             className="menu-item"
             onClick={() => {
               setOpen(false);

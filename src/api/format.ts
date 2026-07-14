@@ -7,6 +7,28 @@ export function pad2(value: number): string {
 }
 
 const BYTE_UNITS = ["B", "KB", "MB", "GB", "TB", "PB"];
+const abbreviatedDateTimeFormatters = new Map<string, Intl.DateTimeFormat>();
+const relativeTimeFormatters = new Map<string, Intl.RelativeTimeFormat>();
+
+function abbreviatedDateTimeFormatter(locale?: string): Intl.DateTimeFormat {
+  const key = locale ?? "";
+  let formatter = abbreviatedDateTimeFormatters.get(key);
+  if (formatter === undefined) {
+    formatter = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
+    abbreviatedDateTimeFormatters.set(key, formatter);
+  }
+  return formatter;
+}
+
+function relativeTimeFormatter(locale?: string): Intl.RelativeTimeFormat {
+  const key = locale ?? "";
+  let formatter = relativeTimeFormatters.get(key);
+  if (formatter === undefined) {
+    formatter = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+    relativeTimeFormatters.set(key, formatter);
+  }
+  return formatter;
+}
 
 function formatUnits(value: number, base: number): string {
   if (!Number.isFinite(value) || value < 0) {
@@ -81,14 +103,12 @@ export function formatDateTime(timestampMs: number, locale?: string): string {
 }
 
 export function formatAbbreviatedDateTime(timestampMs: number, locale?: string): string {
-  return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(
-    new Date(timestampMs),
-  );
+  return abbreviatedDateTimeFormatter(locale).format(new Date(timestampMs));
 }
 
 export function formatRelativeTime(timestampMs: number, nowMs: number, locale?: string): string {
   const deltaSeconds = Math.round((timestampMs - nowMs) / 1000);
-  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  const formatter = relativeTimeFormatter(locale);
   const absSeconds = Math.abs(deltaSeconds);
   if (absSeconds < 60) {
     return formatter.format(deltaSeconds, "second");

@@ -23,10 +23,11 @@ export function DesktopSetupView(props: {
   const [repairError, setRepairError] = useState<string | null>(null);
   const [confirmingTakeOver, setConfirmingTakeOver] = useState(false);
 
-  const runRepair = (repair: () => Promise<unknown>) => {
+  const runRepair = (repair: () => Promise<unknown>, onSuccess?: () => void) => {
     setRepairing(true);
     setRepairError(null);
     repair()
+      .then(onSuccess)
       .catch((error: unknown) => {
         setRepairError(error instanceof Error ? error.message : String(error));
       })
@@ -143,6 +144,7 @@ export function DesktopSetupView(props: {
               <div className={styles.connectionErrorSwitchTitle}>{t("Connect to a remote server")}</div>
               {props.serversState.servers.map((server) => (
                 <button
+                  type="button"
                   key={server.id}
                   className={styles.connectionErrorSwitchItem}
                   onClick={() => props.onSelectServer(server)}
@@ -173,10 +175,7 @@ export function DesktopSetupView(props: {
               variant="danger"
               disabled={repairing}
               onClick={() =>
-                runRepair(async () => {
-                  await host.service.takeOver();
-                  setConfirmingTakeOver(false);
-                })
+                runRepair(host.service.takeOver, () => setConfirmingTakeOver(false))
               }
             >
               {repairing ? <Spinner /> : t("Stop and Take Over")}

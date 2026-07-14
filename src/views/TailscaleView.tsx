@@ -66,7 +66,15 @@ export function TailscaleEndpointView(props: { tag: string }) {
       ? endpoint?.self
       : peers.find((peer) => peer.stableID === peerDetail);
 
-  const openSSHSession = (peer: TailscalePeer, username: string, terminalType: string) => {
+  const openSSHSession = ({
+    peer,
+    username,
+    terminalType,
+  }: {
+    peer: TailscalePeer;
+    username: string;
+    terminalType: string;
+  }) => {
     if (isMobile) {
       setMobileSSH(buildSSHSession(props.tag, peer, username, terminalType));
       return;
@@ -84,9 +92,9 @@ export function TailscaleEndpointView(props: { tag: string }) {
   const connectSSH = (peer: TailscalePeer) => {
     const prefs = loadSSHPrefs()[peer.stableID];
     if (prefs?.remember) {
-      openSSHSession(peer, prefs.username, prefs.terminalType);
+      openSSHSession({ peer, username: prefs.username, terminalType: prefs.terminalType });
     } else {
-      setSSHPromptPeer(peer);
+      setSSHPromptPeer(() => peer);
     }
   };
 
@@ -114,7 +122,7 @@ export function TailscaleEndpointView(props: { tag: string }) {
           onConnect={(username, terminalType, remember) => {
             saveSSHPrefs(sshPromptPeer.stableID, { username, terminalType, remember });
             setSSHPromptPeer(null);
-            openSSHSession(sshPromptPeer, username, terminalType);
+            openSSHSession({ peer: sshPromptPeer, username, terminalType });
           }}
         />
       )}
@@ -261,7 +269,7 @@ function StatusCard(props: {
                   <span className={styles.navLineLabel}>{t("Open auth URL")}</span>
                 </a>
               )}
-              <button className={styles.navLine} onClick={props.onOpenAuthQR}>
+              <button type="button" className={styles.navLine} onClick={props.onOpenAuthQR}>
                 <Icon name="qr_code" size={15} />
                 <span className={styles.navLineLabel}>{t("Show auth URL QR code")}</span>
               </button>
@@ -275,7 +283,7 @@ function StatusCard(props: {
 
 function NavLine(props: { icon: IconName; label: string; value: string; onClick: () => void }) {
   return (
-    <button className={styles.navLine} onClick={props.onClick}>
+    <button type="button" className={styles.navLine} onClick={props.onClick}>
       <Icon name={props.icon} size={15} />
       <span className={styles.navLineLabel}>{props.label}</span>
       <span className={styles.navLineValue}>{props.value}</span>
@@ -301,9 +309,9 @@ function PeerSections(props: {
   onShowPeer: (id: string) => void;
   onConnectSSH: (peer: TailscalePeer) => void;
 }) {
-  const groups = props.endpoint.userGroups
-    .map((group) => ({ group, peers: group.peers }))
-    .filter((entry) => entry.peers.length > 0);
+  const groups = props.endpoint.userGroups.flatMap((group) =>
+    group.peers.length > 0 ? [{ group, peers: group.peers }] : [],
+  );
 
   return (
     <>
@@ -336,7 +344,7 @@ function PeerRow(props: { peer: TailscalePeer; onOpen: () => void; onConnectSSH?
   const now = useNow(30_000);
   return (
     <div className={styles.peerItem}>
-      <button className={styles.peerItemMain} onClick={props.onOpen}>
+      <button type="button" className={styles.peerItemMain} onClick={props.onOpen}>
         <StateDot tone={peer.online ? "good" : undefined} />
         <span className="peer-name">{peerDisplayName(peer)}</span>
         <span className="peer-address">{peer.tailscaleIPs[0] ?? ""}</span>
@@ -569,10 +577,9 @@ function ExitNodePicker(props: {
           className="input"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          autoFocus
         />
       </Field>
-      <button className="peer-row" onClick={() => select("")}>
+      <button type="button" className="peer-row" onClick={() => select("")}>
         <span className="peer-name">{t("Disabled")}</span>
         {current === "" && (
           <span className="badges">
@@ -581,7 +588,7 @@ function ExitNodePicker(props: {
         )}
       </button>
       {filtered.map((peer) => (
-        <button className="peer-row" key={peer.stableID} onClick={() => select(peer.stableID)}>
+        <button type="button" className="peer-row" key={peer.stableID} onClick={() => select(peer.stableID)}>
           <StateDot tone={peer.online ? "good" : undefined} />
           <span className="peer-name">{peerDisplayName(peer)}</span>
           <span className="peer-address">{peer.tailscaleIPs[0] ?? ""}</span>
@@ -631,7 +638,6 @@ function SSHPrompt(props: {
               connect();
             }
           }}
-          autoFocus
         />
       </Field>
       <Field label={t("Terminal type")}>

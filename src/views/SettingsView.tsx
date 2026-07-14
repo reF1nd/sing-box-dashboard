@@ -146,7 +146,7 @@ function AppSettingsContent({
       .get()
       .then((value) => {
         if (!stale) {
-          setSettings(value);
+          setSettings(() => value);
         }
       })
       .catch(showError);
@@ -154,7 +154,7 @@ function AppSettingsContent({
       .cacheSize()
       .then((value) => {
         if (!stale) {
-          setCacheSize(value);
+          setCacheSize(() => value);
         }
       })
       .catch(showError);
@@ -197,6 +197,7 @@ function AppSettingsContent({
               <div className="settings-row">
                 <span className="settings-row-label">{t("Start At Login")}</span>
                 <button
+                  type="button"
                   className={settings.openAtLogin ? "switch on" : "switch"}
                   role="switch"
                   aria-checked={settings.openAtLogin}
@@ -218,6 +219,7 @@ function AppSettingsContent({
               </div>
               {cacheSize !== null && cacheSize > 0 && (
                 <button
+                  type="button"
                   className={cx("settings-row", styles.destructiveRow)}
                   disabled={clearing}
                   onClick={clearCache}
@@ -367,6 +369,7 @@ function CoreViewContent({ host }: { host: DesktopHost }) {
                       </span>
                     </div>
                     <button
+                      type="button"
                       className={disableWarnings ? "switch on" : "switch"}
                       role="switch"
                       aria-checked={disableWarnings}
@@ -385,6 +388,7 @@ function CoreViewContent({ host }: { host: DesktopHost }) {
               <div className="list-section-title">{t("Working Directory")}</div>
               <div className={styles.settingsList}>
                 <button
+                  type="button"
                   className={cx("settings-row", styles.destructiveRow)}
                   disabled={busy}
                   onClick={() => (running ? setConfirming(true) : destroy())}
@@ -494,20 +498,24 @@ function ThemeSchemeSection(props: {
   const { scheme, name, custom } = props;
   const isDark = scheme === "dark";
   const isCustom = name === "";
-  const remembered = useRef(name || (isDark ? DEFAULT_DARK_THEME_NAME : DEFAULT_LIGHT_THEME_NAME));
-  if (!isCustom) {
-    remembered.current = name;
-  }
+  const remembered = useRef(
+    name || (isDark ? DEFAULT_DARK_THEME_NAME : DEFAULT_LIGHT_THEME_NAME),
+  );
   const invalid = isCustom && custom.trim() !== "" && parseCustomTheme(custom) === null;
 
-  const setName = (value: string) =>
+  const setName = (value: string) => {
+    if (value !== "") {
+      remembered.current = value;
+    }
     props.onChange(isDark ? { darkThemeName: value } : { lightThemeName: value });
+  };
 
   return (
     <div>
       <div className="list-section-title">{isDark ? t("Dark") : t("Light")}</div>
       <div className={styles.settingsList}>
         <button
+          type="button"
           className="settings-row"
           disabled={isCustom}
           onClick={() => navigate(`settings/preferences/terminal/theme/${scheme}`)}
@@ -521,6 +529,7 @@ function ThemeSchemeSection(props: {
         <div className="settings-row">
           <span className="settings-row-label">{t("Custom theme")}</span>
           <button
+            type="button"
             className={isCustom ? "switch on" : "switch"}
             role="switch"
             aria-checked={isCustom}
@@ -530,6 +539,7 @@ function ThemeSchemeSection(props: {
         </div>
         {isCustom && (
           <button
+            type="button"
             className="settings-row"
             onClick={() => navigate(`settings/preferences/terminal/custom/${scheme}`)}
           >
@@ -608,6 +618,7 @@ export function TerminalConfigurationView() {
             <div className="settings-row">
               <span className="settings-row-label">{t("Always show")}</span>
               <button
+                type="button"
                 className={config.symbolBarAlwaysShow ? "switch on" : "switch"}
                 role="switch"
                 aria-checked={config.symbolBarAlwaysShow}
@@ -632,7 +643,7 @@ export function TerminalThemeEditorView(props: { scheme: Scheme }) {
   const invalid = value.trim() !== "" && parseCustomTheme(value) === null;
 
   const change = (next: string) => {
-    setValue(next);
+    setValue(() => next);
     const latest = loadTerminalConfig();
     saveTerminalConfig(
       isDark ? { ...latest, darkThemeCustom: next } : { ...latest, lightThemeCustom: next },
@@ -759,6 +770,7 @@ export function TerminalThemePickerView(props: { scheme: Scheme }) {
           <div className={styles.settingsList}>
             {filtered.map((entry) => (
               <button
+                type="button"
                 key={entry.name}
                 className={cx("settings-row", styles.themePickerRow)}
                 onClick={() => select(entry.name)}
@@ -816,6 +828,7 @@ export function ServersView(props: {
           ) : (
             servers.map((server) => (
               <button
+                type="button"
                 className={styles.serverItem}
                 key={server.id}
                 onClick={() => setEditing(server)}
@@ -891,7 +904,6 @@ export function ServerDialog(props: {
             className="input"
             value={url}
             placeholder={t("Required")}
-            autoFocus={!props.server}
             onChange={(event) => setUrl(event.target.value)}
           />
         </Field>

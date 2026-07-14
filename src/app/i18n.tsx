@@ -1,52 +1,24 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 
 import { Select } from "../components/ui";
-import { loadStoredString, removeStoredValue, saveStoredString } from "../lib/storage";
 import { LANGUAGES, TRANSLATIONS, type Language, type MessageKey, type PluralForms } from "./translations";
+import {
+  detectSystemLanguage,
+  loadLanguagePreference,
+  saveLanguagePreference,
+  subscribeSystemLanguage,
+  type LanguagePreference,
+} from "./i18nCore";
 
 export type { Language, MessageKey };
-
-export type LanguagePreference = "auto" | Language;
-
-const LANGUAGE_KEY = "language";
-
-export function loadLanguagePreference(): LanguagePreference {
-  const value = loadStoredString(LANGUAGE_KEY);
-  if (value && LANGUAGES.some((language) => language.value === value)) {
-    return value as Language;
-  }
-  return "auto";
-}
-
-export function saveLanguagePreference(preference: LanguagePreference) {
-  if (preference === "auto") {
-    removeStoredValue(LANGUAGE_KEY);
-  } else {
-    saveStoredString(LANGUAGE_KEY, preference);
-  }
-}
-
-export function detectSystemLanguage(): Language {
-  for (const tag of navigator.languages ?? [navigator.language]) {
-    const lower = tag.toLowerCase();
-    if (lower.startsWith("zh")) {
-      if (/hant|tw|hk|mo/.test(lower)) {
-        return "zh-Hant";
-      }
-      return "zh-Hans";
-    }
-    if (lower.startsWith("fa")) {
-      return "fa";
-    }
-    if (lower.startsWith("ru")) {
-      return "ru";
-    }
-    if (lower.startsWith("en")) {
-      return "en";
-    }
-  }
-  return "en";
-}
 
 function applyLanguage(language: Language) {
   document.documentElement.lang = language;
@@ -105,13 +77,11 @@ export function I18nProvider(props: { children: ReactNode }) {
   const [preference, setPreferenceState] = useState<LanguagePreference>(() =>
     loadLanguagePreference(),
   );
-  const [systemLanguage, setSystemLanguage] = useState<Language>(() => detectSystemLanguage());
-
-  useEffect(() => {
-    const onChange = () => setSystemLanguage(detectSystemLanguage());
-    window.addEventListener("languagechange", onChange);
-    return () => window.removeEventListener("languagechange", onChange);
-  }, []);
+  const systemLanguage = useSyncExternalStore(
+    subscribeSystemLanguage,
+    detectSystemLanguage,
+    detectSystemLanguage,
+  );
 
   const language = preference === "auto" ? systemLanguage : preference;
 
@@ -125,7 +95,7 @@ export function I18nProvider(props: { children: ReactNode }) {
       preference,
       setPreference: (next) => {
         saveLanguagePreference(next);
-        setPreferenceState(next);
+        setPreferenceState(() => next);
       },
       t: (key, params) => translate(language, key, params),
     }),

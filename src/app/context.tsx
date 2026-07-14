@@ -1,7 +1,8 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 import type { DaemonApi } from "../api/daemon";
 import { loadStoredString, removeStoredValue, saveStoredString } from "../lib/storage";
+import { useLatestRef } from "./useLatest";
 
 export const ApiContext = createContext<DaemonApi | null>(null);
 
@@ -47,8 +48,7 @@ export function navigate(path: string) {
 }
 
 export function useNavigationGuard(active: boolean, onBlock: NavigationGuard) {
-  const handler = useRef(onBlock);
-  handler.current = onBlock;
+  const handler = useLatestRef(onBlock);
   useEffect(() => {
     if (!active) {
       return;
@@ -63,7 +63,7 @@ export function useNavigationGuard(active: boolean, onBlock: NavigationGuard) {
       unregister();
       window.removeEventListener("beforeunload", onBeforeUnload);
     };
-  }, [active]);
+  }, [active, handler]);
 }
 
 const MOBILE_QUERY = "(max-width: 720px)";

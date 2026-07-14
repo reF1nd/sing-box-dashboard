@@ -66,6 +66,7 @@ export function ConnectionErrorView(props: {
             <div className={styles.connectionErrorSwitchTitle}>{t("Switch to another server")}</div>
             {others.map((server) => (
               <button
+                type="button"
                 key={server.id}
                 className={styles.connectionErrorSwitchItem}
                 onClick={() => props.onServersChange({ servers, activeId: server.id })}

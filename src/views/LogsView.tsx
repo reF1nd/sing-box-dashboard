@@ -45,6 +45,17 @@ function fileTimestamp(): string {
   return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}-${pad2(now.getHours())}.${pad2(now.getMinutes())}.${pad2(now.getSeconds())}`;
 }
 
+function logFileName(): string {
+  return `logs-${fileTimestamp()}.txt`;
+}
+
+function onShareError(error: unknown): void {
+  if (error instanceof DOMException && error.name === "AbortError") {
+    return;
+  }
+  showError(error);
+}
+
 export function LogsView() {
   const api = useApi();
   const { t } = useI18n();
@@ -90,7 +101,6 @@ export function LogsView() {
   );
 
   const logsText = () => filtered.map((entry) => stripAnsi(entry.message)).join("\n");
-  const logFileName = () => `logs-${fileTimestamp()}.txt`;
   const canShare = typeof navigator.share === "function";
 
   const copyLogs = () => {
@@ -104,13 +114,6 @@ export function LogsView() {
     anchor.download = logFileName();
     anchor.click();
     URL.revokeObjectURL(url);
-  };
-
-  const onShareError = (error: unknown) => {
-    if (error instanceof DOMException && error.name === "AbortError") {
-      return;
-    }
-    showError(error);
   };
 
   const shareLogs = () => {

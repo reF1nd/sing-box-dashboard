@@ -150,11 +150,13 @@ async function applyConfiguration(device: USBDevice, configurationValue: number)
   if (device.configuration?.configurationValue === configurationValue) {
     return;
   }
-  await Promise.all(
-    (device.configuration?.interfaces ?? [])
-      .filter((iface) => iface.claimed)
-      .map((iface) => device.releaseInterface(iface.interfaceNumber).catch(() => {})),
-  );
+  const releaseOperations: Promise<void>[] = [];
+  for (const iface of device.configuration?.interfaces ?? []) {
+    if (iface.claimed) {
+      releaseOperations.push(device.releaseInterface(iface.interfaceNumber).catch(() => {}));
+    }
+  }
+  await Promise.all(releaseOperations);
   await device.selectConfiguration(configurationValue);
   await Promise.all(
     (device.configuration?.interfaces ?? []).map((iface) =>

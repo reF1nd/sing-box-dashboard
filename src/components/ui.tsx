@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type KeyboardEvent, type MouseEventHandler, type ReactNode, type RefObject } from "react";
+import { Children, cloneElement, createContext, isValidElement, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type KeyboardEvent, type MouseEventHandler, type ReactElement, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { encode as encodeQR } from "uqr";
 
@@ -15,6 +15,7 @@ import {
 import { showError } from "../app/errorStore";
 import { useDismiss } from "../app/hooks";
 import { useI18n, type MessageKey } from "../app/i18n";
+import { useLatestRef } from "../app/useLatest";
 import { cx } from "../lib/cx";
 import { Icon, type IconName } from "./Icon";
 
@@ -174,8 +175,14 @@ export function useContextMenu(menu: ReactNode) {
           <div
             ref={menuRef}
             className="menu context-menu"
+            role="menu"
             style={{ left: point.x, top: point.y }}
             onClick={() => setPoint(null)}
+            onKeyUp={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                setPoint(null);
+              }
+            }}
           >
             {menu}
           </div>,
@@ -222,7 +229,7 @@ export function NavRow(props: {
   }
   return (
     <>
-      <button className="nav-row" onClick={props.onClick} onContextMenu={onContextMenu}>
+      <button type="button" className="nav-row" onClick={props.onClick} onContextMenu={onContextMenu}>
         {inner}
       </button>
       {menu}
@@ -236,32 +243,6 @@ export function MenuLink(props: { href: string; children: ReactNode }) {
       <span className="menu-check" />
       {props.children}
     </a>
-  );
-}
-
-export function SegmentedControl(props: {
-  options: { value: string; label: string }[];
-  value: string;
-  onChange: (value: string) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="segmented">
-      {props.options.map((option) => (
-        <button
-          key={option.value}
-          className={option.value === props.value ? "active" : ""}
-          disabled={props.disabled}
-          onClick={() => {
-            if (option.value !== props.value) {
-              props.onChange(option.value);
-            }
-          }}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
   );
 }
 
@@ -283,6 +264,7 @@ export function ThemeSelect(props: {
           key={option.value}
           type="button"
           title={option.title}
+          aria-label={option.title}
           className={props.theme === option.value ? "active" : ""}
           onClick={() => props.onChange(option.value)}
         >
@@ -293,7 +275,7 @@ export function ThemeSelect(props: {
   );
 }
 
-export const ACCENT_TITLES: Record<AccentPreset, MessageKey> = {
+const ACCENT_TITLES: Record<AccentPreset, MessageKey> = {
   default: "Default",
   blue: "Blue",
   purple: "Purple",
@@ -305,7 +287,7 @@ export const ACCENT_TITLES: Record<AccentPreset, MessageKey> = {
   graphite: "Graphite",
 };
 
-export function AccentSelect(props: {
+function AccentSelect(props: {
   accent: AccentPreference;
   onChange: (accent: AccentPreference) => void;
 }) {
@@ -386,6 +368,7 @@ export function ThemeMenu(props: {
 }
 
 export function Select<T extends string | number>(props: {
+  id?: string;
   options: { value: T; label: ReactNode }[];
   value: T;
   onChange: (value: T) => void;
@@ -438,6 +421,7 @@ export function Select<T extends string | number>(props: {
       onKeyDown={onKeyDown}
     >
       <button
+        id={props.id}
         type="button"
         className={props.inline ? "select inline" : "select"}
         aria-haspopup="listbox"
@@ -511,7 +495,7 @@ export function AdaptiveSegmented(props: {
       <div className="segmented-measure" aria-hidden ref={measureRef}>
         <div className="segmented" style={{ height: "auto" }}>
           {props.options.map((option) => (
-            <button key={option.value} tabIndex={-1}>
+            <button type="button" key={option.value} tabIndex={-1}>
               {option.label}
             </button>
           ))}
@@ -521,6 +505,7 @@ export function AdaptiveSegmented(props: {
         <div className="segmented full">
           {props.options.map((option) => (
             <button
+              type="button"
               key={option.value}
               className={option.value === props.value ? "active" : ""}
               onClick={() => {
@@ -549,8 +534,7 @@ function useMenuPopover(
 ) {
   const alignEnd = options?.alignEnd === true;
   const width = options?.width;
-  const dismissRef = useRef(onDismiss);
-  dismissRef.current = onDismiss;
+  const dismissRef = useLatestRef(onDismiss);
   useLayoutEffect(() => {
     if (!open || !anchorRef.current || !menuRef.current) {
       return;
@@ -582,7 +566,7 @@ function useMenuPopover(
     };
     window.addEventListener("scroll", onScroll, true);
     return () => window.removeEventListener("scroll", onScroll, true);
-  }, [open, anchorRef, menuRef, alignEnd, width]);
+  }, [open, anchorRef, menuRef, alignEnd, width, dismissRef]);
 }
 
 export function OthersMenu(props: {
@@ -604,7 +588,18 @@ export function OthersMenu(props: {
         <Icon name={props.icon ?? "more_vert"} />
       </IconButton>
       {open && (
-        <div ref={menuRef} popover="manual" className="menu popover-menu" onClick={() => setOpen(false)}>
+        <div
+          ref={menuRef}
+          popover="manual"
+          className="menu popover-menu"
+          role="menu"
+          onClick={() => setOpen(false)}
+          onKeyUp={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              setOpen(false);
+            }
+          }}
+        >
           <SubMenuGroup>{props.children}</SubMenuGroup>
         </div>
       )}
@@ -619,8 +614,9 @@ const SubMenuGroupContext = createContext<{
 
 function SubMenuGroup(props: { children: ReactNode }) {
   const [openId, setOpenId] = useState<string | null>(null);
+  const value = useMemo(() => ({ openId, setOpenId }), [openId]);
   return (
-    <SubMenuGroupContext.Provider value={{ openId, setOpenId }}>
+    <SubMenuGroupContext.Provider value={value}>
       {props.children}
     </SubMenuGroupContext.Provider>
   );
@@ -637,7 +633,7 @@ export function SubMenu(props: { label: ReactNode; icon?: IconName; children: Re
   const open = group ? group.openId === id : localOpen;
   const setOpen = (next: boolean) => {
     if (!group) {
-      setLocalOpen(next);
+      setLocalOpen(() => next);
     } else if (next) {
       group.setOpenId(id);
     } else if (group.openId === id) {
@@ -659,6 +655,7 @@ export function SubMenu(props: { label: ReactNode; icon?: IconName; children: Re
       }}
     >
       <button
+        type="button"
         className="menu-item"
         onClick={(event) => {
           event.stopPropagation();
@@ -685,6 +682,7 @@ export function MenuItem(props: {
 }) {
   return (
     <button
+      type="button"
       className={props.danger ? "menu-item danger" : "menu-item"}
       onClick={props.onSelect}
     >
@@ -700,6 +698,7 @@ export function MenuItem(props: {
 export function Switch(props: { value: boolean; onChange: (value: boolean) => void; disabled?: boolean; label?: string }) {
   return (
     <button
+      type="button"
       className={props.value ? "switch on" : "switch"}
       role="switch"
       aria-checked={props.value}
@@ -714,16 +713,25 @@ export function Toggle(props: { label: ReactNode; value: boolean; onChange: (val
   return (
     <div className="toggle-line">
       <span>{props.label}</span>
-      <Switch value={props.value} onChange={props.onChange} disabled={props.disabled} />
+      <Switch
+        label={typeof props.label === "string" ? props.label : undefined}
+        value={props.value}
+        onChange={props.onChange}
+        disabled={props.disabled}
+      />
     </div>
   );
 }
 
-export function Field(props: { label: ReactNode; children: ReactNode }) {
+export function Field(props: { label: ReactNode; children: ReactElement<{ id?: string }> }) {
+  const generatedId = useId();
+  const controlId = props.children.props.id ?? generatedId;
   return (
     <div className="field">
-      <label>{props.label}</label>
-      {props.children}
+      <label className="field-label" htmlFor={controlId}>
+        {props.label}
+      </label>
+      {cloneElement(props.children, { id: controlId })}
     </div>
   );
 }
@@ -744,6 +752,7 @@ export function SearchInput(props: { value: string; onChange: (value: string) =>
 }
 
 export function SecretInput(props: {
+  id?: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -754,6 +763,7 @@ export function SecretInput(props: {
   return (
     <div className="secret-input">
       <input
+        id={props.id}
         className="input"
         type={visible ? "text" : "password"}
         autoComplete="new-password"
@@ -862,7 +872,10 @@ function useShowModal(focusSelf = false) {
   return ref;
 }
 
-function closeOnBackdropClick(event: React.MouseEvent<HTMLDialogElement>, onClose: () => void) {
+function closeOnBackdropPointerDown(
+  event: React.PointerEvent<HTMLDialogElement>,
+  onClose: () => void,
+) {
   if (event.target !== event.currentTarget) {
     return;
   }
@@ -877,22 +890,49 @@ function closeOnBackdropClick(event: React.MouseEvent<HTMLDialogElement>, onClos
   }
 }
 
-export function Drawer(props: { onClose: () => void; children: ReactNode }) {
+function Drawer(props: { onClose: () => void; ariaLabel: string; children: ReactNode }) {
   const ref = useShowModal(true);
   return (
     <dialog
       ref={ref}
       className="drawer"
+      aria-label={props.ariaLabel}
       tabIndex={-1}
       onCancel={(event) => {
         event.preventDefault();
         props.onClose();
       }}
-      onClick={(event) => closeOnBackdropClick(event, props.onClose)}
+      onPointerDown={(event) => closeOnBackdropPointerDown(event, props.onClose)}
     >
       {props.children}
     </dialog>
   );
+}
+
+function reactNodeText(node: ReactNode): string {
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node);
+  }
+  if (Array.isArray(node)) {
+    return node.map(reactNodeText).join("").trim();
+  }
+  return isValidElement<{ children?: ReactNode }>(node) ? reactNodeText(node.props.children) : "";
+}
+
+function dialogAccessibleName(children: ReactNode): string {
+  for (const child of Children.toArray(children)) {
+    if (
+      isValidElement<{ children?: ReactNode }>(child) &&
+      typeof child.type === "string" &&
+      /^h[1-6]$/.test(child.type)
+    ) {
+      const label = reactNodeText(child.props.children);
+      if (label !== "") {
+        return label;
+      }
+    }
+  }
+  return "Dialog";
 }
 
 export function Dialog(props: { onClose: () => void; className?: string; children: ReactNode }) {
@@ -901,11 +941,12 @@ export function Dialog(props: { onClose: () => void; className?: string; childre
     <dialog
       ref={ref}
       className={props.className ? `dialog ${props.className}` : "dialog"}
+      aria-label={dialogAccessibleName(props.children)}
       onCancel={(event) => {
         event.preventDefault();
         props.onClose();
       }}
-      onClick={(event) => closeOnBackdropClick(event, props.onClose)}
+      onPointerDown={(event) => closeOnBackdropPointerDown(event, props.onClose)}
     >
       {props.children}
     </dialog>
@@ -925,7 +966,7 @@ export function DetailShell(props: {
     return (
       <div className="page">
         <div className="page-header">
-          <button className="back-button" aria-label={props.backLabel} onClick={props.onClose}>
+          <button type="button" className="back-button" aria-label={props.backLabel} onClick={props.onClose}>
             <Icon name="arrow_back" size={20} />
           </button>
           <h1 className="page-title">{props.title}</h1>
@@ -937,7 +978,10 @@ export function DetailShell(props: {
     );
   }
   return (
-    <Drawer onClose={props.onClose}>
+    <Drawer
+      onClose={props.onClose}
+      ariaLabel={typeof props.title === "string" ? props.title : props.backLabel}
+    >
       <h3>
         {props.title}
         {props.accessory && <span style={{ marginInlineStart: "auto" }}>{props.accessory}</span>}

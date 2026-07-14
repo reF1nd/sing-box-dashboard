@@ -99,6 +99,7 @@ function GroupCard(props: { group: Group }) {
           <div className={styles.groupItems}>
             {group.items.map((item) => (
               <button
+                type="button"
                 key={item.tag}
                 className={cx(styles.groupItem, item.tag === selected && styles.selected)}
                 onClick={() => selectItem(item)}

@@ -252,7 +252,7 @@ const ConnectionRowView = memo(function ConnectionRowView(props: {
   const active = row.closedAt === null;
   const chain = [...connection.chainList].reverse();
   return (
-    <button className={styles.connectionRow} onClick={() => props.onOpen(connection.id)}>
+    <button type="button" className={styles.connectionRow} onClick={() => props.onOpen(connection.id)}>
       <div className={styles.head}>
         <Badge>{connection.network.toUpperCase()}</Badge>
         <span className={styles.destination}>{displayDestination(row)}</span>

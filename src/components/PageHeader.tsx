@@ -47,7 +47,7 @@ export function PageHeader(props: {
   return (
     <div className="page-header">
       {props.back !== undefined && (
-        <button className="back-button" aria-label={props.back.label} onClick={props.back.onClick}>
+        <button type="button" className="back-button" aria-label={props.back.label} onClick={props.back.onClick}>
           <Icon name="arrow_back" size={20} />
         </button>
       )}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 
 import { formatRelativeTime } from "../api/format";
 import { describeError } from "../api/stream";
@@ -9,7 +9,7 @@ import { showError } from "../app/errorStore";
 import { useI18n } from "../app/i18n";
 import { Icon } from "../components/Icon";
 import type { IconName } from "../components/Icon";
-import { JsonEditor, type JsonEditorHandle } from "../components/JsonEditor";
+import type { JsonEditorHandle } from "../components/JsonEditor";
 import {
   Button,
   Card,
@@ -27,6 +27,10 @@ import {
 import { ProfileQRSDialog } from "./ProfileQRSDialog";
 import styles from "./ProfileViews.module.css";
 import { cx } from "../lib/cx";
+
+const JsonEditor = lazy(() =>
+  import("../components/JsonEditor").then((module) => ({ default: module.JsonEditor })),
+);
 
 function profileTypeIcon(type: DesktopProfileType): IconName {
   return type === "remote" ? "language" : "text_snippet";
@@ -112,7 +116,7 @@ export function ProfileCard(props: { host: DesktopHost }) {
       .pickImportFile()
       .then((request) => {
         if (request !== null) {
-          setImportRequest(request);
+          setImportRequest(() => request);
         }
       })
       .catch(showError);
@@ -149,7 +153,7 @@ export function ProfileCard(props: { host: DesktopHost }) {
         <p className={styles.profileEmpty}>{t("Empty profiles")}</p>
       ) : (
         <>
-          <button className={styles.profileSelector} onClick={() => setPicking(true)}>
+          <button type="button" className={styles.profileSelector} onClick={() => setPicking(true)}>
             <span className={styles.profileSelectorName}>
               {selected?.name ?? t("Select Profile")}
             </span>
@@ -303,6 +307,7 @@ function ProfilePickerDialog(props: { host: DesktopHost; onClose: () => void }) 
               </span>
             )}
             <button
+              type="button"
               className={styles.profileRowMain}
               disabled={editing}
               onClick={() => select(profile.id)}
@@ -367,7 +372,7 @@ function CreateProfileDialog(props: {
   const [type, setType] = useState<DesktopProfileType>(props.initial?.type ?? "local");
   const [remoteUrl, setRemoteUrl] = useState(props.initial?.remoteUrl ?? "");
   const [autoUpdate, setAutoUpdate] = useState(true);
-  const [interval, setInterval] = useState("60");
+  const [interval, setIntervalValue] = useState("60");
   const [busy, setBusy] = useState(false);
 
   const valid = name.trim() !== "" && (type === "local" || remoteUrl.trim() !== "");
@@ -422,7 +427,7 @@ function CreateProfileDialog(props: {
               min="15"
               placeholder={t("In Minutes")}
               value={interval}
-              onChange={(event) => setInterval(event.target.value)}
+              onChange={(event) => setIntervalValue(event.target.value)}
             />
           </Field>
         </>
@@ -450,7 +455,7 @@ function EditProfileDialog(props: {
   const [name, setName] = useState(profile.name);
   const [remoteUrl, setRemoteUrl] = useState(profile.remoteUrl ?? "");
   const [autoUpdate, setAutoUpdate] = useState(profile.autoUpdate);
-  const [interval, setInterval] = useState(String(profile.autoUpdateIntervalMinutes));
+  const [interval, setIntervalValue] = useState(String(profile.autoUpdateIntervalMinutes));
   const [editingContent, setEditingContent] = useState(false);
   const [confirmingClose, setConfirmingClose] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -521,7 +526,7 @@ function EditProfileDialog(props: {
               type="number"
               min="15"
               value={interval}
-              onChange={(event) => setInterval(event.target.value)}
+              onChange={(event) => setIntervalValue(event.target.value)}
             />
           </Field>
           {profile.lastUpdated !== undefined && (
@@ -596,8 +601,8 @@ function ProfileContentDialog(props: {
     host.profiles
       .readContent(props.profile.id)
       .then((value) => {
-        setContent(value);
-        setSavedContent(value);
+        setContent(() => value);
+        setSavedContent(() => value);
       })
       .catch((error: unknown) => {
         showError(error);
@@ -612,9 +617,9 @@ function ProfileContentDialog(props: {
   }, [props.profile.id]);
 
   const edit = (value: string, undoAvailable: boolean, redoAvailable: boolean) => {
-    setContent(value);
-    setCanUndo(undoAvailable);
-    setCanRedo(redoAvailable);
+    setContent(() => value);
+    setCanUndo(() => undoAvailable);
+    setCanRedo(() => redoAvailable);
     setCheckError(null);
     if (checkTimer.current !== null) {
       window.clearTimeout(checkTimer.current);
@@ -675,14 +680,16 @@ function ProfileContentDialog(props: {
       {savedContent === null ? (
         <div className={styles.profileEditor} />
       ) : (
-        <JsonEditor
-          ref={editorRef}
-          className={styles.profileEditor}
-          initialValue={savedContent}
-          readOnly={props.readOnly}
-          onChange={edit}
-          onSave={props.readOnly ? undefined : save}
-        />
+        <Suspense fallback={<div className={styles.profileEditor} />}>
+          <JsonEditor
+            ref={editorRef}
+            className={styles.profileEditor}
+            initialValue={savedContent}
+            readOnly={props.readOnly}
+            onChange={edit}
+            onSave={props.readOnly ? undefined : save}
+          />
+        </Suspense>
       )}
       {checkError !== null && (
         <div className={cx("banner error", styles.editorBanner)}>
@@ -698,6 +705,7 @@ function ProfileContentDialog(props: {
             type="button"
             className={styles.editorKey}
             title={t("Undo")}
+            aria-label={t("Undo")}
             disabled={!canUndo}
             onPointerDown={(event) => event.preventDefault()}
             onClick={() => editorRef.current?.undo()}
@@ -708,6 +716,7 @@ function ProfileContentDialog(props: {
             type="button"
             className={styles.editorKey}
             title={t("Redo")}
+            aria-label={t("Redo")}
             disabled={!canRedo}
             onPointerDown={(event) => event.preventDefault()}
             onClick={() => editorRef.current?.redo()}
@@ -817,7 +826,7 @@ export function SystemProxyCard(props: { host: DesktopHost }) {
       .status()
       .then((value) => {
         if (!stale) {
-          setStatus(value);
+          setStatus(() => value);
         }
       })
       .catch(() => {});
@@ -864,7 +873,7 @@ export function ImportRemoteProfileDialog(props: { host: DesktopHost }) {
   useEffect(
     () =>
       host.onImportRemoteProfile((value) => {
-        setRequest(value);
+        setRequest(() => value);
         setConfirmed(false);
       }),
     [host],

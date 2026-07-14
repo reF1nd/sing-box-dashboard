@@ -36,7 +36,7 @@ export function useDiagnosedConnectError(
     const controller = new AbortController();
     void diagnoseConnection(serverConnectUrl(serverUrl), controller.signal).then((result) => {
       if (!controller.signal.aborted) {
-        setDiagnosis(result);
+        setDiagnosis(() => result);
       }
     });
     return () => controller.abort();

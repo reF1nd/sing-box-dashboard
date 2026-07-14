@@ -204,20 +204,22 @@ function OutboundPicker(props: { value: string; onChange: (value: string) => voi
   };
 
   return (
-    <Field label={t("Outbound")}>
-      <button
-        type="button"
-        className="select"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        disabled={props.disabled}
-        onClick={() => {
-          setSearch("");
-          setOpen(true);
-        }}
-      >
-        <span className="select-value">{props.value === "" ? t("Default") : props.value}</span>
-      </button>
+    <>
+      <Field label={t("Outbound")}>
+        <button
+          type="button"
+          className="select"
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          disabled={props.disabled}
+          onClick={() => {
+            setSearch("");
+            setOpen(true);
+          }}
+        >
+          <span className="select-value">{props.value === "" ? t("Default") : props.value}</span>
+        </button>
+      </Field>
       {open && (
         <Dialog onClose={() => setOpen(false)}>
           <h3>{t("Outbound")}</h3>
@@ -226,10 +228,9 @@ function OutboundPicker(props: { value: string; onChange: (value: string) => voi
               className="input"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              autoFocus
             />
           </Field>
-          <button className="peer-row" onClick={() => select("")}>
+          <button type="button" className="peer-row" onClick={() => select("")}>
             <span className="peer-name">{t("Default")}</span>
             {props.value === "" && (
               <span className="badges">
@@ -238,7 +239,7 @@ function OutboundPicker(props: { value: string; onChange: (value: string) => voi
             )}
           </button>
           {filtered.map((outbound) => (
-            <button className="peer-row" key={outbound.tag} onClick={() => select(outbound.tag)}>
+            <button type="button" className="peer-row" key={outbound.tag} onClick={() => select(outbound.tag)}>
               <span className="peer-name">{outbound.tag}</span>
               <span className="peer-address">
                 {proxyDisplayType(outbound.type)}
@@ -253,7 +254,7 @@ function OutboundPicker(props: { value: string; onChange: (value: string) => voi
           ))}
         </Dialog>
       )}
-    </Field>
+    </>
   );
 }
 

@@ -3,6 +3,7 @@ import { useEffect, useReducer, useRef } from "react";
 import type { Server } from "../api/config";
 import { showError } from "../app/errorStore";
 import { useI18n, type Translate } from "../app/i18n";
+import { useLatestRef } from "../app/useLatest";
 import { GrpcWebSocketStream, type GrpcStatus } from "../api/websocket";
 import {
   USBProviderMessageSchema,
@@ -433,6 +434,7 @@ async function releaseDevice(device: USBDevice): Promise<void> {
 }
 
 export interface PermittedDevice {
+  key: string;
   device: USBDevice;
   label: string;
   vidPid: string;
@@ -458,8 +460,7 @@ export function useUsbipProvider(config: Server, serverTag: string): UsbipProvid
   const sessionRef = useRef<UsbipProviderSession | null>(null);
   const [, forceUpdate] = useReducer((n: number) => n + 1, 0);
 
-  const translateRef = useRef(t);
-  translateRef.current = t;
+  const translateRef = useLatestRef(t);
 
   useEffect(() => {
     return () => {
@@ -488,12 +489,24 @@ export function useUsbipProvider(config: Server, serverTag: string): UsbipProvid
       return [];
     }
     const attached = sessionRef.current?.attachedDevices() ?? new Set<USBDevice>();
-    return devices.map((device) => ({
-      device,
-      label: deviceLabel(device),
-      vidPid: formatVidPid(device.vendorId, device.productId),
-      attached: attached.has(device),
-    }));
+    const identityCounts = new Map<string, number>();
+    return devices.map((device) => {
+      const identity = [
+        formatVidPid(device.vendorId, device.productId),
+        device.serialNumber ?? "",
+        device.manufacturerName ?? "",
+        device.productName ?? "",
+      ].join(":");
+      const occurrence = identityCounts.get(identity) ?? 0;
+      identityCounts.set(identity, occurrence + 1);
+      return {
+        key: `${identity}:${occurrence}`,
+        device,
+        label: deviceLabel(device),
+        vidPid: formatVidPid(device.vendorId, device.productId),
+        attached: attached.has(device),
+      };
+    });
   };
 
   const attachPermitted = async (device: USBDevice): Promise<void> => {

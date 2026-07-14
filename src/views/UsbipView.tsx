@@ -305,9 +305,9 @@ function AddDeviceMenu({ provider }: { provider: UsbipProvider }) {
           ) : (
             <>
               {permitted.length > 0 && <MenuLabel>{t("Authorized devices")}</MenuLabel>}
-              {permitted.map((entry, index) => (
+              {permitted.map((entry) => (
                 <button
-                  key={`${entry.vidPid}-${index}`}
+                  key={entry.key}
                   type="button"
                   className="menu-item"
                   disabled={entry.attached}
@@ -350,7 +350,7 @@ function DeviceItem({ row, onOpen }: { row: DeviceRow; onOpen: (key: string) => 
   return (
     <div className={styles.usbipItem}>
       {row.descriptor ? (
-        <button className={styles.usbipItemMain} onClick={() => onOpen(row.key)}>
+        <button type="button" className={styles.usbipItemMain} onClick={() => onOpen(row.key)}>
           {body}
         </button>
       ) : (
@@ -378,6 +378,13 @@ function UsbDeviceDetailBody({ row }: { row: DeviceRow }) {
     return null;
   }
   const speed = usbSpeedLabel(descriptor.speed);
+  const interfaceCounts = new Map<string, number>();
+  const interfaces = descriptor.interfaces.map((iface, index) => {
+    const identity = `${iface.interfaceClass}:${iface.interfaceSubClass}:${iface.interfaceProtocol}`;
+    const occurrence = interfaceCounts.get(identity) ?? 0;
+    interfaceCounts.set(identity, occurrence + 1);
+    return { iface, key: `${identity}:${occurrence}`, number: index + 1 };
+  });
   return (
     <>
       <DetailSection title={t("Identity")}>
@@ -420,10 +427,10 @@ function UsbDeviceDetailBody({ row }: { row: DeviceRow }) {
             mono
           />
         )}
-        {descriptor.interfaces.map((iface, index) => (
+        {interfaces.map(({ iface, key, number }) => (
           <DataLine
-            key={index}
-            label={t("Interface {n}", { n: index + 1 })}
+            key={key}
+            label={t("Interface {n}", { n: number })}
             value={usbClassTriplet(iface.interfaceClass, iface.interfaceSubClass, iface.interfaceProtocol)}
             mono
           />

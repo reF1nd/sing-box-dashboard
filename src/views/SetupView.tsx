@@ -7,12 +7,12 @@ import type { AccentPreference, ThemePreference } from "../app/context";
 import { LanguageSelect, useI18n, type Translate } from "../app/i18n";
 import { Icon } from "../components/Icon";
 import {
-  checkServerReachable,
   ReachabilityIndicator,
   useServerReachability,
 } from "../components/ReachabilityIndicator";
 import { Brand, Button, Field, SecretInput, Spinner, ThemeMenu, ThemeSelect } from "../components/ui";
 import { guessApiBaseUrl } from "../lib/connectivity";
+import { checkServerReachable } from "../lib/reachability";
 import styles from "./SetupView.module.css";
 
 const CONNECT_TIMEOUT_MS = 8000;
@@ -140,7 +140,6 @@ export function SetupView(props: {
               className="input"
               value={url}
               placeholder={t("Required")}
-              autoFocus
               disabled={connecting}
               onChange={(event) => setUrl(event.target.value)}
             />

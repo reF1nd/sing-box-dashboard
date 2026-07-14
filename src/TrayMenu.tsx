@@ -75,7 +75,7 @@ function useSubmenuController(): SubmenuController {
   };
   const open = (key: string) => {
     cancelClose();
-    setActiveKey(key);
+    setActiveKey(() => key);
   };
   const close = () => {
     cancelClose();
@@ -198,10 +198,16 @@ function TrayMenuContent(props: { host: DesktopHost }) {
   return (
     <div
       className={styles.viewport}
+      role="presentation"
       onMouseLeave={controller.scheduleClose}
       onMouseDown={dismissOnBackground}
     >
-      <div className={styles.content} data-tray-content onMouseDown={dismissOnBackground}>
+      <div
+        className={styles.content}
+        role="presentation"
+        data-tray-content
+        onMouseDown={dismissOnBackground}
+      >
         <div className={styles.panel} data-tray-panel>
           <div className={styles.header}>
             <span className={styles.title}>sing-box</span>
@@ -219,7 +225,7 @@ function TrayMenuContent(props: { host: DesktopHost }) {
           {errorMessage !== null && (
             <div className={styles.error}>
               <span className={styles.errorText}>{errorMessage}</span>
-              <button className={styles.errorDismiss} aria-label={t("Ok")} onClick={dismissError}>
+              <button type="button" className={styles.errorDismiss} aria-label={t("Ok")} onClick={dismissError}>
                 <Icon name="close" size={14} />
               </button>
             </div>
@@ -244,6 +250,7 @@ function TrayMenuContent(props: { host: DesktopHost }) {
           </div>
           <div className={styles.section}>
             <button
+              type="button"
               className={styles.row}
               onMouseEnter={controller.close}
               onClick={() => {
@@ -257,6 +264,7 @@ function TrayMenuContent(props: { host: DesktopHost }) {
               <span className={styles.rowLabel}>{t("Open")}</span>
             </button>
             <button
+              type="button"
               className={styles.row}
               onMouseEnter={controller.close}
               onClick={host.application.quit}
@@ -284,6 +292,7 @@ function ParentRow(props: {
   const active = controller.activeKey === menuKey;
   return (
     <button
+      type="button"
       className={cx(styles.row, active && styles.rowActive)}
       aria-haspopup="menu"
       aria-expanded={active}
@@ -334,16 +343,10 @@ function GroupsCascade(props: {
   };
   const open = (tag: string) => {
     cancelClose();
-    setActiveTag(tag);
+    setActiveTag(() => tag);
   };
 
   useEffect(() => cancelClose, []);
-  useEffect(() => {
-    if (activeTag !== null && activeGroup === null) {
-      setActiveTag(null);
-    }
-  }, [activeTag, activeGroup]);
-
   return (
     <div
       className={styles.cascade}
@@ -401,6 +404,7 @@ function GroupsSubmenu(props: {
   return (
     <>
       <button
+        type="button"
         className={styles.row}
         disabled={testingAll}
         onMouseEnter={props.onClose}
@@ -411,7 +415,7 @@ function GroupsSubmenu(props: {
         </span>
         <span className={styles.rowLabel}>{t("URLTest All")}</span>
       </button>
-      <button className={styles.row} onMouseEnter={props.onClose} onClick={closeAllConnections}>
+      <button type="button" className={styles.row} onMouseEnter={props.onClose} onClick={closeAllConnections}>
         <span className={styles.rowIcon}>
           <Icon name="close" size={16} />
         </span>
@@ -420,6 +424,7 @@ function GroupsSubmenu(props: {
       <div className={styles.section}>
         {props.groups.map((group) => (
           <button
+            type="button"
             key={group.tag}
             className={cx(styles.row, props.activeTag === group.tag && styles.rowActive)}
             aria-haspopup="menu"
@@ -467,6 +472,7 @@ function GroupNodes(props: { group: Group; api: DaemonApi; onClose: () => void }
   return (
     <>
       <button
+        type="button"
         className={styles.row}
         disabled={testing}
         onClick={runURLTest}
@@ -486,6 +492,7 @@ function GroupNodes(props: { group: Group; api: DaemonApi; onClose: () => void }
       <div className={styles.submenuList}>
         {group.items.map((item) => (
           <button
+            type="button"
             key={item.tag}
             className={styles.row}
             onClick={() => selectItem(item.tag)}
@@ -545,7 +552,7 @@ function ProfilesSubmenu(props: {
   return (
     <div className={styles.submenuList}>
       {props.profiles.map((profile) => (
-        <button key={profile.id} className={styles.row} onClick={() => props.onSelect(profile.id)}>
+        <button type="button" key={profile.id} className={styles.row} onClick={() => props.onSelect(profile.id)}>
           <span className={styles.rowIcon}>
             {profile.id === props.selectedId && <Icon name="check" size={16} />}
           </span>

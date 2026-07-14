@@ -60,10 +60,13 @@ export function loadDashboardCardsConfig(desktop: boolean): DashboardCardsConfig
     let order = (Array.isArray(parsed.order) ? parsed.order : []).filter(
       (card): card is string => typeof card === "string" && known.has(card),
     );
-    order = order.concat(defaults.filter((card) => !order.includes(card)));
+    const ordered = new Set(order);
+    order = order.concat(defaults.filter((card) => !ordered.has(card)));
+    const enabledCards = new Set(enabled);
     for (const card of defaults) {
-      if (DASHBOARD_CARDS[card].permanent && !enabled.includes(card)) {
+      if (DASHBOARD_CARDS[card].permanent && !enabledCards.has(card)) {
         enabled = orderedEnabledCards({ enabled: [...enabled, card], order });
+        enabledCards.add(card);
       }
     }
     return { enabled, order };
@@ -82,7 +85,8 @@ export function resetDashboardCardsConfig(desktop: boolean): DashboardCardsConfi
 }
 
 export function orderedEnabledCards(config: DashboardCardsConfig): string[] {
-  return config.order.filter((card) => config.enabled.includes(card));
+  const enabled = new Set(config.enabled);
+  return config.order.filter((card) => enabled.has(card));
 }
 
 export function toggleCard(config: DashboardCardsConfig, card: string): DashboardCardsConfig {

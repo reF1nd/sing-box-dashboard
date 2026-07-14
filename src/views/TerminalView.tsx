@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal, type ITheme } from "@xterm/xterm";
@@ -9,9 +9,11 @@ import { GrpcWebSocketStream } from "../api/websocket";
 import { useApi, useIsMobile } from "../app/context";
 import { useKeyboardInset, useTerminalConfig } from "../app/hooks";
 import { useI18n } from "../app/i18n";
+import { useLatestRef } from "../app/useLatest";
 import { Icon } from "../components/Icon";
-import { SYMBOL_BAR_HEIGHT, TerminalSymbolBar } from "../components/TerminalSymbolBar";
-import { EmptyState, IconButton, MenuItem, OthersMenu, Spinner, SubMenu } from "../components/ui";
+import { SYMBOL_BAR_HEIGHT } from "../components/TerminalSymbolBar";
+import { TerminalSessionLayout } from "../components/TerminalSessionLayout";
+import { EmptyState, IconButton, MenuItem, OthersMenu, SubMenu } from "../components/ui";
 import {
   armModifier,
   consumeArmed,
@@ -25,6 +27,7 @@ import {
 import {
   TailscaleSSHClientMessageSchema,
   TailscaleSSHServerMessageSchema,
+  type TailscalePeer,
 } from "../gen/daemon/started_service_pb";
 import {
   allPeers,
@@ -46,7 +49,6 @@ import {
   type Scheme,
 } from "../lib/terminalTheme";
 import styles from "./TerminalView.module.css";
-import { cx } from "../lib/cx";
 
 export function TailscaleSSHView(props: {
   tag: string;
@@ -57,19 +59,11 @@ export function TailscaleSSHView(props: {
   const api = useApi();
   const { t } = useI18n();
   const tailscale = useStream(api.tailscale);
-  const [initialSession, setInitialSession] = useState<SSHSessionOptions | null>(null);
 
   const endpoint = tailscale.data.endpoints.find((entry) => entry.endpointTag === props.tag);
   const peer = allPeers(endpoint).find((entry) => entry.stableID === props.peerID);
 
-  useEffect(() => {
-    if (initialSession || !peer) {
-      return;
-    }
-    setInitialSession(buildSSHSession(props.tag, peer, props.username, props.terminalType));
-  }, [initialSession, peer, props.tag, props.username, props.terminalType]);
-
-  if (!initialSession) {
+  if (!peer) {
     return (
       <div className="page page-full terminal-page">
         <div className="page-header">
@@ -86,9 +80,26 @@ export function TailscaleSSHView(props: {
 
   return (
     <div className="page page-full terminal-page">
-      <TerminalContainer tag={props.tag} initialSession={initialSession} setWindowTitle />
+      <TailscaleSSHSession
+        tag={props.tag}
+        peer={peer}
+        username={props.username}
+        terminalType={props.terminalType}
+      />
     </div>
   );
+}
+
+function TailscaleSSHSession(props: {
+  tag: string;
+  peer: TailscalePeer;
+  username: string;
+  terminalType: string;
+}) {
+  const [initialSession] = useState(() =>
+    buildSSHSession(props.tag, props.peer, props.username, props.terminalType),
+  );
+  return <TerminalContainer tag={props.tag} initialSession={initialSession} setWindowTitle />;
 }
 
 export function TerminalOverlay(props: {
@@ -145,8 +156,7 @@ function TerminalContainer(props: {
     }
   }, [props.setWindowTitle, activeTitle]);
 
-  const onCloseRef = useRef(props.onClose);
-  onCloseRef.current = props.onClose;
+  const onCloseRef = useLatestRef(props.onClose);
   useEffect(() => {
     if (state.sessions.length > 0) {
       return;
@@ -156,7 +166,7 @@ function TerminalContainer(props: {
     } else {
       window.close();
     }
-  }, [state.sessions.length]);
+  }, [state.sessions.length, onCloseRef]);
 
   const addSession = (options: SSHSessionOptions) => {
     const id = ++idRef.current;
@@ -186,7 +196,7 @@ function TerminalContainer(props: {
 
   const handleExit = (id: number, clean: boolean) => {
     if (clean) {
-      window.setTimeout(() => closeSession(id), 1000);
+      window.setTimeout(() => closeSession(Number(id)), 1000);
     }
   };
 
@@ -283,20 +293,6 @@ function TerminalContainer(props: {
   );
 }
 
-const BANNER_URL_REGEX = /(https?:\/\/[^\s]+)/g;
-
-function linkifyBanner(text: string): ReactNode[] {
-  return text.split(BANNER_URL_REGEX).map((part, i) =>
-    i % 2 === 1 ? (
-      <a key={i} href={part} target="_blank" rel="noreferrer">
-        {part}
-      </a>
-    ) : (
-      part
-    ),
-  );
-}
-
 function TerminalSession(props: {
   session: SSHSessionOptions;
   active: boolean;
@@ -314,26 +310,20 @@ function TerminalSession(props: {
   const keyboardInset = useKeyboardInset();
   const config = useTerminalConfig();
   const { symbolBarAlwaysShow } = config;
-  const configRef = useRef(config);
-  configRef.current = config;
+  const configRef = useLatestRef(config);
   const [scheme, setScheme] = useState<Scheme>(() => currentScheme());
   const [activeTheme, setActiveTheme] = useState<ITheme>(() => resolveThemeSync(config, scheme));
   const [connecting, setConnecting] = useState(true);
   const [banner, setBanner] = useState<string | null>(null);
   const [modifiers, setModifiers] = useState<Modifiers>({ ctrl: "off", alt: "off" });
-  const modifiersRef = useRef(modifiers);
-  modifiersRef.current = modifiers;
+  const modifiersRef = useLatestRef(modifiers);
   const armedAtRef = useRef<Record<ModKey, number>>({ ctrl: 0, alt: 0 });
   const sendRawRef = useRef<((text: string) => void) | null>(null);
 
-  const tRef = useRef(t);
-  tRef.current = t;
-  const onStatusLineRef = useRef(props.onStatusLine);
-  onStatusLineRef.current = props.onStatusLine;
-  const onTitleChangeRef = useRef(props.onTitleChange);
-  onTitleChangeRef.current = props.onTitleChange;
-  const onExitRef = useRef(props.onExit);
-  onExitRef.current = props.onExit;
+  const tRef = useLatestRef(t);
+  const onStatusLineRef = useLatestRef(props.onStatusLine);
+  const onTitleChangeRef = useLatestRef(props.onTitleChange);
+  const onExitRef = useLatestRef(props.onExit);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -448,7 +438,7 @@ function TerminalSession(props: {
         sendRaw(encodeText(data, mods));
         setModifiers((current) => consumeArmed(current));
       } else {
-        sendRaw(data);
+        sendRaw(String(data));
       }
     });
     const resizeSubscription = terminal.onResize((size) => {
@@ -480,7 +470,16 @@ function TerminalSession(props: {
       fitRef.current = null;
       sendRawRef.current = null;
     };
-  }, [api, props.session]);
+  }, [
+    api,
+    props.session,
+    configRef,
+    modifiersRef,
+    onExitRef,
+    onStatusLineRef,
+    onTitleChangeRef,
+    tRef,
+  ]);
 
   useEffect(() => {
     if (!props.active) {
@@ -520,7 +519,7 @@ function TerminalSession(props: {
         return;
       }
       term.options.theme = theme;
-      setActiveTheme(theme);
+      setActiveTheme(() => theme);
       fitRef.current?.fit();
     });
     return () => {
@@ -578,33 +577,19 @@ function TerminalSession(props: {
   }
 
   return (
-    <>
-      <div className={styles.terminalHostWrap} style={!props.active ? { display: "none" } : undefined}>
-        <div
-          className={styles.terminalHost}
-          style={Object.keys(hostStyle).length > 0 ? hostStyle : undefined}
-          ref={hostRef}
-        />
-        {props.active && connecting && (
-          <div className={styles.terminalConnecting}>
-            <Spinner className={styles.terminalConnectingSpinner} />
-            {banner ? (
-              <div className={cx("card", styles.terminalBanner)}>{linkifyBanner(banner)}</div>
-            ) : (
-              <span className={styles.terminalConnectingLabel}>{t("Connecting...")}</span>
-            )}
-          </div>
-        )}
-      </div>
-      {barVisible && (
-        <TerminalSymbolBar
-          modifiers={modifiers}
-          onModifier={handleModifier}
-          onKey={handleKey}
-          onPaste={handlePaste}
-          style={{ bottom: keyboardInset }}
-        />
-      )}
-    </>
+    <TerminalSessionLayout
+      active={props.active}
+      hostRef={hostRef}
+      hostStyle={Object.keys(hostStyle).length > 0 ? hostStyle : undefined}
+      connecting={connecting}
+      banner={banner}
+      connectingLabel={t("Connecting...")}
+      barVisible={barVisible}
+      keyboardInset={keyboardInset}
+      modifiers={modifiers}
+      onModifier={handleModifier}
+      onKey={handleKey}
+      onPaste={handlePaste}
+    />
   );
 }

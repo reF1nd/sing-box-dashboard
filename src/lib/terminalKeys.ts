@@ -20,26 +20,26 @@ export type TerminalKey =
   | { kind: "paste" }
   | { kind: "divider" };
 
-export const DEFAULT_KEYS: readonly TerminalKey[] = [
-  { kind: "special", id: "esc", label: "esc" },
-  { kind: "special", id: "tab", label: "tab" },
-  { kind: "modifier", mod: "ctrl", label: "⌃" },
-  { kind: "modifier", mod: "alt", label: "⌥" },
-  { kind: "divider" },
-  { kind: "special", id: "left", label: "←" },
-  { kind: "special", id: "up", label: "↑" },
-  { kind: "special", id: "down", label: "↓" },
-  { kind: "special", id: "right", label: "→" },
-  { kind: "divider" },
-  { kind: "text", char: "|" },
-  { kind: "text", char: "/" },
-  { kind: "text", char: "~" },
-  { kind: "text", char: "-" },
-  { kind: "text", char: "_" },
-  { kind: "text", char: "`" },
-  { kind: "text", char: "'" },
-  { kind: "text", char: '"' },
-  { kind: "paste" },
+export const DEFAULT_KEYS: readonly (TerminalKey & { key: string })[] = [
+  { key: "escape", kind: "special", id: "esc", label: "esc" },
+  { key: "tab", kind: "special", id: "tab", label: "tab" },
+  { key: "control", kind: "modifier", mod: "ctrl", label: "⌃" },
+  { key: "option", kind: "modifier", mod: "alt", label: "⌥" },
+  { key: "navigation-divider", kind: "divider" },
+  { key: "left", kind: "special", id: "left", label: "←" },
+  { key: "up", kind: "special", id: "up", label: "↑" },
+  { key: "down", kind: "special", id: "down", label: "↓" },
+  { key: "right", kind: "special", id: "right", label: "→" },
+  { key: "symbols-divider", kind: "divider" },
+  { key: "pipe", kind: "text", char: "|" },
+  { key: "slash", kind: "text", char: "/" },
+  { key: "tilde", kind: "text", char: "~" },
+  { key: "hyphen", kind: "text", char: "-" },
+  { key: "underscore", kind: "text", char: "_" },
+  { key: "backtick", kind: "text", char: "`" },
+  { key: "single-quote", kind: "text", char: "'" },
+  { key: "double-quote", kind: "text", char: '"' },
+  { key: "paste", kind: "paste" },
 ];
 
 export function controlByte(ch: string): string | null {

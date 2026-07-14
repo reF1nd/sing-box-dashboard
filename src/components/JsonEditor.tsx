@@ -12,9 +12,12 @@ import {
 import { json } from "@codemirror/lang-json";
 import { bracketMatching, HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { search, searchKeymap } from "@codemirror/search";
+// oxlint-disable-next-line react-doctor/prefer-dynamic-import -- JsonEditor is itself loaded through React.lazy.
 import { EditorState } from "@codemirror/state";
+// oxlint-disable-next-line react-doctor/prefer-dynamic-import -- JsonEditor is itself loaded through React.lazy.
 import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
+import { useLatestRef } from "../app/useLatest";
 
 export interface JsonEditorHandle {
   undo(): void;
@@ -108,10 +111,8 @@ export function JsonEditor(props: {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const initialValueRef = useRef(props.initialValue);
-  const onChangeRef = useRef(props.onChange);
-  onChangeRef.current = props.onChange;
-  const onSaveRef = useRef(props.onSave);
-  onSaveRef.current = props.onSave;
+  const onChangeRef = useLatestRef(props.onChange);
+  const onSaveRef = useLatestRef(props.onSave);
 
   useEffect(() => {
     const view = new EditorView({

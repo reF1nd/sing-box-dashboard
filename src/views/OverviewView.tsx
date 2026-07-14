@@ -42,7 +42,7 @@ export function OverviewView() {
 
   const updateCardsConfig = (next: DashboardCardsConfig) => {
     saveDashboardCardsConfig(next);
-    setCardsConfig(next);
+    setCardsConfig(() => next);
   };
 
   let stateLabel: string | null = null;
@@ -210,6 +210,7 @@ function CardManagementDialog(props: {
   const { t } = useI18n();
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const enabledCards = new Set(props.config.enabled);
 
   const moveDrag = (event: React.PointerEvent<HTMLElement>) => {
     if (dragIndex === null || !listRef.current) {
@@ -236,7 +237,7 @@ function CardManagementDialog(props: {
           }
           const entry = DASHBOARD_CARDS[card];
           const permanent = entry.permanent === true;
-          const enabled = permanent || props.config.enabled.includes(card);
+          const enabled = permanent || enabledCards.has(card);
           return (
             <div
               key={card}
@@ -258,9 +259,11 @@ function CardManagementDialog(props: {
               <Icon name={entry.icon} size={15} />
               <span className={styles.cardManageTitle}>{t(entry.title)}</span>
               <button
+                type="button"
                 className={enabled ? "switch on" : "switch"}
                 role="switch"
                 aria-checked={enabled}
+                aria-label={t(entry.title)}
                 disabled={permanent}
                 onClick={() => props.onChange(toggleCard(props.config, card))}
               />

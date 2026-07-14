@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 import type { Code, Transport } from "@connectrpc/connect";
 
@@ -6,6 +6,7 @@ import { isTerminalCode, type StreamPhase, type StreamSnapshot } from "../api/st
 import type { NetworkQualityTestProgress, STUNTestProgress } from "../gen/daemon/started_service_pb";
 import type { PreferenceStorage } from "../lib/storage";
 import { showError } from "./errorStore";
+import { useLatestRef } from "./useLatest";
 
 export type DaemonConnectionPhase =
   | "connecting"
@@ -235,13 +236,13 @@ export function useDaemonConnection(host: DesktopHost): DaemonConnectionState {
     let pushed = false;
     const unsubscribe = host.daemon.onStateChanged((value) => {
       pushed = true;
-      setState(value);
+      setState(() => value);
     });
     host.daemon
       .getState()
       .then((value) => {
         if (!stale && !pushed) {
-          setState(value);
+          setState(() => value);
         }
       })
       .catch(() => {});
@@ -270,7 +271,7 @@ export class RemoteSessionMonitor {
 
   constructor(private onEnd: (failure: RemoteSessionFailure) => void) {}
 
-  observe(phase: StreamPhase, errorMessage: string | undefined, errorCode: Code | undefined) {
+  update(phase: StreamPhase, errorMessage: string | undefined, errorCode: Code | undefined) {
     if (phase === "active") {
       if (!this.cycleActive) {
         this.cycleActive = true;
@@ -301,21 +302,17 @@ export function useRemoteSession(
   monitor: StreamSnapshot<unknown> | null,
   onEnd: (failure: RemoteSessionFailure) => void,
 ) {
-  const onEndRef = useRef(onEnd);
-  onEndRef.current = onEnd;
-  const sessionRef = useRef<RemoteSessionMonitor | null>(null);
-  if (sessionRef.current === null && monitor !== null) {
-    sessionRef.current = new RemoteSessionMonitor((failure) => onEndRef.current(failure));
-  }
+  const onEndRef = useLatestRef(onEnd);
+  const [session] = useState(() => new RemoteSessionMonitor((failure) => onEndRef.current(failure)));
   const phase = monitor?.phase ?? null;
   const errorMessage = monitor?.error;
   const errorCode = monitor?.errorCode;
 
   useEffect(() => {
     if (phase !== null) {
-      sessionRef.current?.observe(phase, errorMessage, errorCode);
+      session.update(phase, errorMessage, errorCode);
     }
-  }, [phase, errorMessage, errorCode]);
+  }, [session, phase, errorMessage, errorCode]);
 }
 
 export function useDesktopProfiles(host: DesktopHost): DesktopProfilesState {
@@ -330,7 +327,7 @@ export function useDesktopProfiles(host: DesktopHost): DesktopProfilesState {
         .list()
         .then((value) => {
           if (!stale && token === sequence) {
-            setState(value);
+            setState(() => value);
           }
         })
         .catch(showError);
