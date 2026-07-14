@@ -120,6 +120,10 @@
   border-radius: var(--radius-md);
 }
 
+.toolbar-spinner :global(.spinner) {
+  border-top-color: var(--text-secondary);
+}
+
 .toolbar-uptime {
   composes: text-mono-caption from global;
   color: var(--text-secondary);
