@@ -207,19 +207,12 @@ export function TailscaleEndpointView(props: { tag: string }) {
   );
 }
 
-function backendStateTone(state: string): DelayTone {
-  switch (state) {
-    case "Running":
-      return "good";
-    case "NeedsLogin":
-    case "NeedsMachineAuth":
-      return "bad";
-    case "Starting":
-      return "medium";
-    default:
-      return "neutral";
-  }
-}
+const BACKEND_STATE_TONES: Record<string, DelayTone> = {
+  Running: "good",
+  NeedsLogin: "bad",
+  NeedsMachineAuth: "bad",
+  Starting: "medium",
+};
 
 function StatusCard(props: {
   endpoint: TailscaleEndpointStatus;
@@ -241,7 +234,7 @@ function StatusCard(props: {
             <Icon name="power_settings_new" size={15} />
             <span className={styles.navLineLabel}>{t("State")}</span>
             <span className={styles.navLineValue}>
-              <StateDot tone={backendStateTone(endpoint.backendState)} />
+              <StateDot tone={BACKEND_STATE_TONES[endpoint.backendState] ?? "neutral"} />
               {endpoint.backendState || t("Unknown")}
             </span>
           </div>
@@ -289,18 +282,6 @@ function NavLine(props: { icon: IconName; label: string; value: string; onClick:
       <span className={styles.navLineValue}>{props.value}</span>
       <Icon name="keyboard_arrow_right" size={14} />
     </button>
-  );
-}
-
-function peerMatches(peer: TailscalePeer, query: string): boolean {
-  if (query === "") {
-    return true;
-  }
-  return (
-    peerDisplayName(peer).toLowerCase().includes(query) ||
-    peer.hostName.toLowerCase().includes(query) ||
-    peer.dnsName.toLowerCase().includes(query) ||
-    peer.tailscaleIPs.some((address) => address.includes(query))
   );
 }
 
@@ -565,8 +546,14 @@ function ExitNodePicker(props: {
     props.onClose();
   };
 
-  const filtered = props.candidates.filter((peer) =>
-    peerMatches(peer, search.trim().toLowerCase()),
+  const query = search.trim().toLowerCase();
+  const filtered = props.candidates.filter(
+    (peer) =>
+      query === "" ||
+      peerDisplayName(peer).toLowerCase().includes(query) ||
+      peer.hostName.toLowerCase().includes(query) ||
+      peer.dnsName.toLowerCase().includes(query) ||
+      peer.tailscaleIPs.some((address) => address.includes(query)),
   );
 
   return (

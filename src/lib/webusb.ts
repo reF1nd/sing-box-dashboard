@@ -30,12 +30,6 @@ export function formatVidPid(vendorId: number, productId: number): string {
 
 type DescriptorInit = MessageInitShape<typeof USBDeviceDescriptorSchema>;
 
-function inferSpeed(device: USBDevice): number {
-  if (device.usbVersionMajor >= 3) return 5;
-  if (device.usbVersionMajor >= 2) return 3;
-  return 2;
-}
-
 export function buildDescriptor(device: USBDevice, deviceId: string): DescriptorInit {
   const configuration = device.configuration;
   const interfaces = (configuration?.interfaces ?? []).map((iface) => ({
@@ -47,7 +41,7 @@ export function buildDescriptor(device: USBDevice, deviceId: string): Descriptor
     deviceId,
     busNum: 0,
     devNum: 0,
-    speed: inferSpeed(device),
+    speed: device.usbVersionMajor >= 3 ? 5 : device.usbVersionMajor >= 2 ? 3 : 2,
     vendorId: device.vendorId,
     productId: device.productId,
     bcdDevice:
@@ -67,17 +61,6 @@ export function buildDescriptor(device: USBDevice, deviceId: string): Descriptor
 
 const REQUEST_TYPES: USBRequestType[] = ["standard", "class", "vendor"];
 const RECIPIENTS: USBRecipient[] = ["device", "interface", "endpoint", "other"];
-
-function parseSetup(setup: Uint8Array): USBControlTransferParameters {
-  const bmRequestType = setup[0];
-  return {
-    requestType: REQUEST_TYPES[(bmRequestType >> 5) & 0x03] ?? "vendor",
-    recipient: RECIPIENTS[bmRequestType & 0x1f] ?? "other",
-    request: setup[1],
-    value: setup[2] | (setup[3] << 8),
-    index: setup[4] | (setup[5] << 8),
-  };
-}
 
 export interface UrbResult {
   status: number;
@@ -169,7 +152,14 @@ export async function executeUrb(device: USBDevice, req: USBURBRequest): Promise
   try {
     const endpointNumber = req.endpoint & 0x0f;
     if (endpointNumber === 0) {
-      const params = parseSetup(req.setup);
+      const bmRequestType = req.setup[0];
+      const params: USBControlTransferParameters = {
+        requestType: REQUEST_TYPES[(bmRequestType >> 5) & 0x03] ?? "vendor",
+        recipient: RECIPIENTS[bmRequestType & 0x1f] ?? "other",
+        request: req.setup[1],
+        value: req.setup[2] | (req.setup[3] << 8),
+        index: req.setup[4] | (req.setup[5] << 8),
+      };
       if ((req.setup[0] & 0x80) !== 0) {
         const result = await device.controlTransferIn(params, req.transferBufferLength);
         const inData = toBytes(result.data);

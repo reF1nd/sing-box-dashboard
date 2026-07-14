@@ -34,18 +34,13 @@ export function isTerminalCode(code: Code | undefined): boolean {
   );
 }
 
-const scheduleFlush = (callback: () => void): number =>
-  setTimeout(callback, 0) as unknown as number;
-
-const cancelFlush = (handle: number): void => clearTimeout(handle);
-
 export class StreamStore<T> {
   private listeners = new Set<() => void>();
   private snapshot: StreamSnapshot<T>;
   private controller: AbortController | null = null;
   private skipBackoff = false;
   private wakeBackoff: (() => void) | null = null;
-  private flushHandle: number | null = null;
+  private flushHandle: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private createInitial: () => T,
@@ -86,7 +81,7 @@ export class StreamStore<T> {
   private setSnapshot(next: StreamSnapshot<T>) {
     this.snapshot = next;
     if (this.flushHandle === null) {
-      this.flushHandle = scheduleFlush(() => {
+      this.flushHandle = setTimeout(() => {
         this.flushHandle = null;
         for (const listener of this.listeners) {
           listener();
@@ -106,7 +101,7 @@ export class StreamStore<T> {
     this.controller?.abort();
     this.controller = null;
     if (this.flushHandle !== null) {
-      cancelFlush(this.flushHandle);
+      clearTimeout(this.flushHandle);
       this.flushHandle = null;
     }
   }

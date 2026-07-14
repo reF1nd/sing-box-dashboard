@@ -8,7 +8,6 @@ import { useDesktopProfiles } from "../app/desktop";
 import { showError } from "../app/errorStore";
 import { useI18n } from "../app/i18n";
 import { Icon } from "../components/Icon";
-import type { IconName } from "../components/Icon";
 import type { JsonEditorHandle } from "../components/JsonEditor";
 import {
   Button,
@@ -32,10 +31,6 @@ const JsonEditor = lazy(() =>
   import("../components/JsonEditor").then((module) => ({ default: module.JsonEditor })),
 );
 
-function profileTypeIcon(type: DesktopProfileType): IconName {
-  return type === "remote" ? "language" : "text_snippet";
-}
-
 function ProfileTypeLabel(props: { type: DesktopProfileType }) {
   const { t } = useI18n();
   return <>{props.type === "remote" ? t("Remote") : t("Local")}</>;
@@ -48,7 +43,7 @@ function ProfileInfo(props: { profile: DesktopProfile }) {
   return (
     <span className={styles.profileInfo}>
       <span className={styles.profileInfoItem}>
-        <Icon name={profileTypeIcon(profile.type)} size={12} />
+        <Icon name={profile.type === "remote" ? "language" : "text_snippet"} size={12} />
         <ProfileTypeLabel type={profile.type} />
       </span>
       {profile.type === "remote" && profile.lastUpdated !== undefined && (

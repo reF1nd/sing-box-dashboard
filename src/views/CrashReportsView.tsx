@@ -31,13 +31,8 @@ import styles from "./CrashReportsView.module.css";
 import { ToolsPageHeader } from "./ToolsView";
 import { crashReportFileDisplayName, crashReportTitle } from "./reportFormat";
 
-function reportPath(name: string, crashedAt: number | null): string {
-  const path = `tools/crash-reports/${encodeURIComponent(name)}`;
-  return crashedAt !== null ? `${path}?at=${crashedAt}` : path;
-}
-
-function reportFilePath(name: string, file: string, crashedAt: number | null): string {
-  const path = `tools/crash-reports/${encodeURIComponent(name)}/${encodeURIComponent(file)}`;
+function reportPath(name: string, crashedAt: number | null, file?: string): string {
+  const path = `tools/crash-reports/${encodeURIComponent(name)}${file === undefined ? "" : `/${encodeURIComponent(file)}`}`;
   return crashedAt !== null ? `${path}?at=${crashedAt}` : path;
 }
 
@@ -238,7 +233,7 @@ function CrashReportDetailContent({
                     type="button"
                     key={file.name}
                     className="nav-row"
-                    onClick={() => navigate(reportFilePath(name, file.name, crashedAt))}
+                    onClick={() => navigate(reportPath(name, crashedAt, file.name))}
                   >
                     <span>{crashReportFileDisplayName(file.name, t)}</span>
                     <Icon name="keyboard_arrow_right" size={14} />

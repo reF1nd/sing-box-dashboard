@@ -165,10 +165,6 @@ function TrayMenuContent(props: { host: DesktopHost }) {
   const selectableGroups = groups.data.groups.filter((group) => group.selectable);
   const running = connected && started;
 
-  const selectProfile = (id: string) => {
-    host.profiles.select(id).then(closeMenu).catch(showError);
-  };
-
   const dismissOnBackground = (event: MouseEvent) => {
     if (event.target === event.currentTarget) {
       closeMenu();
@@ -183,7 +179,11 @@ function TrayMenuContent(props: { host: DesktopHost }) {
           onMouseEnter={controller.cancelClose}
           onMouseLeave={controller.scheduleClose}
         >
-          <ProfilesSubmenu profiles={profiles} selectedId={selectedId} onSelect={selectProfile} />
+          <ProfilesSubmenu
+            profiles={profiles}
+            selectedId={selectedId}
+            onSelect={(id) => host.profiles.select(id).then(closeMenu).catch(showError)}
+          />
         </div>
       ) : (
         <GroupsCascade
@@ -390,17 +390,6 @@ function GroupsSubmenu(props: {
   const { t } = useI18n();
   const [testingAll, setTestingAll] = useState(false);
 
-  const urlTestAll = () => {
-    setTestingAll(true);
-    Promise.all(props.groups.map((group) => props.api.urlTest(group.tag)))
-      .catch(showError)
-      .finally(() => setTestingAll(false));
-  };
-
-  const closeAllConnections = () => {
-    props.api.closeAllConnections().catch(showError);
-  };
-
   return (
     <>
       <button
@@ -408,14 +397,24 @@ function GroupsSubmenu(props: {
         className={styles.row}
         disabled={testingAll}
         onMouseEnter={props.onClose}
-        onClick={urlTestAll}
+        onClick={() => {
+          setTestingAll(true);
+          Promise.all(props.groups.map((group) => props.api.urlTest(group.tag)))
+            .catch(showError)
+            .finally(() => setTestingAll(false));
+        }}
       >
         <span className={styles.rowIcon}>
           {testingAll ? <Spinner /> : <Icon name="speed" size={16} />}
         </span>
         <span className={styles.rowLabel}>{t("URLTest All")}</span>
       </button>
-      <button type="button" className={styles.row} onMouseEnter={props.onClose} onClick={closeAllConnections}>
+      <button
+        type="button"
+        className={styles.row}
+        onMouseEnter={props.onClose}
+        onClick={() => props.api.closeAllConnections().catch(showError)}
+      >
         <span className={styles.rowIcon}>
           <Icon name="close" size={16} />
         </span>

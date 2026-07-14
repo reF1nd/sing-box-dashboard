@@ -185,21 +185,6 @@ function TerminalContainer(props: {
     }));
   };
 
-  const closeSession = (id: number) => {
-    setState((current) => {
-      const sessions = current.sessions.filter((session) => session.id !== id);
-      const activeID =
-        current.activeID === id ? (sessions[sessions.length - 1]?.id ?? 0) : current.activeID;
-      return { sessions, activeID };
-    });
-  };
-
-  const handleExit = (id: number, clean: boolean) => {
-    if (clean) {
-      window.setTimeout(() => closeSession(Number(id)), 1000);
-    }
-  };
-
   const prefs = loadSSHPrefs();
   const endpoint = tailscale.data.endpoints.find((entry) => entry.endpointTag === props.tag);
   const rememberedPeers = allPeers(endpoint).filter(
@@ -286,7 +271,20 @@ function TerminalContainer(props: {
           active={session.id === state.activeID}
           onStatusLine={(line) => updateSession(session.id, { statusLine: line })}
           onTitleChange={(title) => updateSession(session.id, { title })}
-          onExit={(clean) => handleExit(session.id, clean)}
+          onExit={(clean) => {
+            if (clean) {
+              window.setTimeout(() => {
+                setState((current) => {
+                  const sessions = current.sessions.filter((entry) => entry.id !== session.id);
+                  const activeID =
+                    current.activeID === session.id
+                      ? (sessions[sessions.length - 1]?.id ?? 0)
+                      : current.activeID;
+                  return { sessions, activeID };
+                });
+              }, 1000);
+            }
+          }}
         />
       ))}
     </>

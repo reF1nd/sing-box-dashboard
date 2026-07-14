@@ -11,14 +11,6 @@ const QRS_URL_PREFIX = "https://qrss.netlify.app/#";
 const DEFAULT_FPS = 10;
 const DEFAULT_SLICE_SIZE = 500;
 
-function frameToText(binary: Uint8Array): string {
-  let raw = "";
-  for (const byte of binary) {
-    raw += String.fromCharCode(byte);
-  }
-  return QRS_URL_PREFIX + btoa(raw);
-}
-
 function SliderField(props: {
   label: string;
   min: number;
@@ -91,7 +83,13 @@ export function ProfileQRSDialog(props: {
     if (fountain === null) {
       return;
     }
-    const nextFrame = () => setFrame(frameToText(blockToBinary(fountain.next().value)));
+    const nextFrame = () => {
+      let raw = "";
+      for (const byte of blockToBinary(fountain.next().value)) {
+        raw += String.fromCharCode(byte);
+      }
+      setFrame(QRS_URL_PREFIX + btoa(raw));
+    };
     nextFrame();
     const timer = window.setInterval(nextFrame, 1000 / fps);
     return () => window.clearInterval(timer);

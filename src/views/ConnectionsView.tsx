@@ -235,13 +235,6 @@ function plainMatch(row: ConnectionRow, query: string): boolean {
   );
 }
 
-function displayDestination(row: ConnectionRow): string {
-  if (row.connection.domain !== "") {
-    return row.connection.domain;
-  }
-  return row.connection.destination;
-}
-
 const ConnectionRowView = memo(function ConnectionRowView(props: {
   row: ConnectionRow;
   onOpen: (id: string) => void;
@@ -255,7 +248,7 @@ const ConnectionRowView = memo(function ConnectionRowView(props: {
     <button type="button" className={styles.connectionRow} onClick={() => props.onOpen(connection.id)}>
       <div className={styles.head}>
         <Badge>{connection.network.toUpperCase()}</Badge>
-        <span className={styles.destination}>{displayDestination(row)}</span>
+        <span className={styles.destination}>{connection.domain || connection.destination}</span>
         <span className={styles.spacer} />
         <Badge tone={active ? "good" : "danger"}>{active ? t("Active") : t("Closed")}</Badge>
       </div>

@@ -40,13 +40,10 @@ function resolveBackground(): Rgb {
   return parseCssColor(value) ?? [255, 255, 255];
 }
 
-function fileTimestamp(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}-${pad2(now.getHours())}.${pad2(now.getMinutes())}.${pad2(now.getSeconds())}`;
-}
-
 function logFileName(): string {
-  return `logs-${fileTimestamp()}.txt`;
+  const now = new Date();
+  const timestamp = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}-${pad2(now.getHours())}.${pad2(now.getMinutes())}.${pad2(now.getSeconds())}`;
+  return `logs-${timestamp}.txt`;
 }
 
 function onShareError(error: unknown): void {
@@ -102,10 +99,6 @@ export function LogsView() {
 
   const logsText = () => filtered.map((entry) => stripAnsi(entry.message)).join("\n");
   const canShare = typeof navigator.share === "function";
-
-  const copyLogs = () => {
-    void navigator.clipboard.writeText(logsText()).catch(showError);
-  };
 
   const saveLogs = () => {
     const url = URL.createObjectURL(new Blob([logsText()], { type: "text/plain" }));
@@ -193,7 +186,10 @@ export function LogsView() {
                 ))}
               </SubMenu>
               <SubMenu label={t("Save")} icon="save">
-                <MenuItem icon="content_copy" onSelect={copyLogs}>
+                <MenuItem
+                  icon="content_copy"
+                  onSelect={() => void navigator.clipboard.writeText(logsText()).catch(showError)}
+                >
                   {t("To Clipboard")}
                 </MenuItem>
                 <MenuItem icon="save" onSelect={saveLogs}>

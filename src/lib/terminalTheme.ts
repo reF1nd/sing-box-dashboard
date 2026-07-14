@@ -105,14 +105,11 @@ function themeName(config: TerminalConfig, scheme: Scheme): string {
   return scheme === "dark" ? config.darkThemeName : config.lightThemeName;
 }
 
-function customJson(config: TerminalConfig, scheme: Scheme): string {
-  return scheme === "dark" ? config.darkThemeCustom : config.lightThemeCustom;
-}
-
 export function resolveThemeSync(config: TerminalConfig, scheme: Scheme): ITheme {
   const name = themeName(config, scheme);
   if (name === "") {
-    return parseCustomTheme(customJson(config, scheme)) ?? fallbackTheme(scheme);
+    const custom = scheme === "dark" ? config.darkThemeCustom : config.lightThemeCustom;
+    return parseCustomTheme(custom) ?? fallbackTheme(scheme);
   }
   return seedTheme(name)?.theme ?? fallbackTheme(scheme);
 }
@@ -123,8 +120,8 @@ export async function resolveTheme(config: TerminalConfig, scheme: Scheme): Prom
     return resolveThemeSync(config, scheme);
   }
   try {
-    const { findTheme } = await import("./terminalThemes");
-    return findTheme(name)?.theme ?? fallbackTheme(scheme);
+    const { TERMINAL_THEMES } = await import("./terminalThemes");
+    return TERMINAL_THEMES.find((entry) => entry.name === name)?.theme ?? fallbackTheme(scheme);
   } catch {
     return fallbackTheme(scheme);
   }

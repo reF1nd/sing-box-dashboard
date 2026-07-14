@@ -677,14 +677,6 @@ export function TerminalThemeEditorView(props: { scheme: Scheme }) {
   });
   const invalid = value.trim() !== "" && parseCustomTheme(value) === null;
 
-  const change = (next: string) => {
-    setValue(() => next);
-    const latest = loadTerminalConfig();
-    saveTerminalConfig(
-      isDark ? { ...latest, darkThemeCustom: next } : { ...latest, lightThemeCustom: next },
-    );
-  };
-
   return (
     <div className="page">
       <SettingsPageHeader
@@ -700,7 +692,14 @@ export function TerminalThemeEditorView(props: { scheme: Scheme }) {
           autoCorrect="off"
           placeholder={CUSTOM_THEME_PLACEHOLDER}
           value={value}
-          onChange={(event) => change(event.target.value)}
+          onChange={(event) => {
+            const next = event.target.value;
+            setValue(() => next);
+            const latest = loadTerminalConfig();
+            saveTerminalConfig(
+              isDark ? { ...latest, darkThemeCustom: next } : { ...latest, lightThemeCustom: next },
+            );
+          }}
         />
         {invalid && <span className={styles.fieldError}>{t("Invalid theme JSON")}</span>}
         <p className={styles.themeEditorNote}>
@@ -752,7 +751,9 @@ export function TerminalThemePickerView(props: { scheme: Scheme }) {
     let active = true;
     void import("../lib/terminalThemes").then((module) => {
       if (active) {
-        setThemes(module.themesForScheme(props.scheme === "dark"));
+        setThemes(
+          module.TERMINAL_THEMES.filter((entry) => entry.isDark === (props.scheme === "dark")),
+        );
       }
     });
     return () => {

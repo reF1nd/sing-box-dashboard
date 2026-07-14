@@ -42,7 +42,7 @@ export const DEFAULT_KEYS: readonly (TerminalKey & { key: string })[] = [
   { key: "paste", kind: "paste" },
 ];
 
-export function controlByte(ch: string): string | null {
+function controlByte(ch: string): string | null {
   if (ch.length !== 1) {
     return null;
   }
@@ -93,19 +93,20 @@ export function hasActiveModifier(mods: Modifiers): boolean {
   return mods.ctrl !== "off" || mods.alt !== "off";
 }
 
-function nextModState(current: ModState, doubleTap: boolean): ModState {
-  switch (current) {
-    case "off":
-      return "armed";
-    case "armed":
-      return doubleTap ? "locked" : "off";
-    case "locked":
-      return "off";
-  }
-}
-
 export function armModifier(mods: Modifiers, which: ModKey, doubleTap: boolean): Modifiers {
-  return { ...mods, [which]: nextModState(mods[which], doubleTap) };
+  let next: ModState;
+  switch (mods[which]) {
+    case "off":
+      next = "armed";
+      break;
+    case "armed":
+      next = doubleTap ? "locked" : "off";
+      break;
+    case "locked":
+      next = "off";
+      break;
+  }
+  return { ...mods, [which]: next };
 }
 
 export function consumeArmed(mods: Modifiers): Modifiers {

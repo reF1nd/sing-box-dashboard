@@ -919,8 +919,10 @@ function reactNodeText(node: ReactNode): string {
   return isValidElement<{ children?: ReactNode }>(node) ? reactNodeText(node.props.children) : "";
 }
 
-function dialogAccessibleName(children: ReactNode): string {
-  for (const child of Children.toArray(children)) {
+export function Dialog(props: { onClose: () => void; className?: string; children: ReactNode }) {
+  const ref = useShowModal();
+  let accessibleName = "Dialog";
+  for (const child of Children.toArray(props.children)) {
     if (
       isValidElement<{ children?: ReactNode }>(child) &&
       typeof child.type === "string" &&
@@ -928,20 +930,16 @@ function dialogAccessibleName(children: ReactNode): string {
     ) {
       const label = reactNodeText(child.props.children);
       if (label !== "") {
-        return label;
+        accessibleName = label;
+        break;
       }
     }
   }
-  return "Dialog";
-}
-
-export function Dialog(props: { onClose: () => void; className?: string; children: ReactNode }) {
-  const ref = useShowModal();
   return (
     <dialog
       ref={ref}
       className={props.className ? `dialog ${props.className}` : "dialog"}
-      aria-label={dialogAccessibleName(props.children)}
+      aria-label={accessibleName}
       onCancel={(event) => {
         event.preventDefault();
         props.onClose();

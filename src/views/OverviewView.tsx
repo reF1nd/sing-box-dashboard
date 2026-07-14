@@ -40,11 +40,6 @@ export function OverviewView() {
   const statusType = serviceStatus.data.status?.status;
   const started = statusType === ServiceStatus_Type.STARTED;
 
-  const updateCardsConfig = (next: DashboardCardsConfig) => {
-    saveDashboardCardsConfig(next);
-    setCardsConfig(() => next);
-  };
-
   let stateLabel: string | null = null;
   if (serviceStatus.phase === "active" && !started) {
     switch (statusType) {
@@ -105,7 +100,10 @@ export function OverviewView() {
         <CardManagementDialog
           config={cardsConfig}
           desktop={host !== null}
-          onChange={updateCardsConfig}
+          onChange={(next) => {
+            saveDashboardCardsConfig(next);
+            setCardsConfig(() => next);
+          }}
           onClose={() => setManaging(false)}
         />
       )}

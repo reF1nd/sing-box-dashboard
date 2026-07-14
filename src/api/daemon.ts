@@ -1,4 +1,4 @@
-import type { Client, Interceptor, Transport } from "@connectrpc/connect";
+import type { Client, Transport } from "@connectrpc/connect";
 import { Code, ConnectError, createClient } from "@connectrpc/connect";
 import { createGrpcWebTransport } from "@connectrpc/connect-web";
 
@@ -89,13 +89,6 @@ export interface ServerInfo {
   apiVersion: number;
 }
 
-function authInterceptor(secret: string): Interceptor {
-  return (next) => (request) => {
-    request.header.set("Authorization", `Bearer ${secret}`);
-    return next(request);
-  };
-}
-
 const SUBSCRIPTION_INTERVAL = 1_000_000_000n;
 
 export class DaemonApi {
@@ -122,7 +115,14 @@ export class DaemonApi {
       transport ??
         createGrpcWebTransport({
           baseUrl: serverConnectUrl(config.url),
-          interceptors: config.secret ? [authInterceptor(config.secret)] : [],
+          interceptors: config.secret
+            ? [
+                (next) => (request) => {
+                  request.header.set("Authorization", `Bearer ${config.secret}`);
+                  return next(request);
+                },
+              ]
+            : [],
         }),
     );
 
@@ -291,7 +291,13 @@ export class DaemonApi {
     this.usbip = new StreamStore<UsbipData>(
       () => ({ servers: [], loaded: false }),
       async ({ signal, update }) => {
-        await this.requireApiVersion(MIN_API_VERSION.usbip);
+        const { apiVersion } = await this.serverInfo();
+        if (apiVersion < MIN_API_VERSION.usbip) {
+          throw new ConnectError(
+            `requires server API version ${MIN_API_VERSION.usbip}`,
+            Code.Unimplemented,
+          );
+        }
         for await (const message of this.client.subscribeUSBIPServerStatus({}, { signal })) {
           update(() => ({ servers: message.servers, loaded: true }));
         }
@@ -357,13 +363,6 @@ export class DaemonApi {
       this.versionCache = { version: response.version, apiVersion: response.apiVersion };
     }
     return this.versionCache;
-  }
-
-  private async requireApiVersion(min: number): Promise<void> {
-    const { apiVersion } = await this.serverInfo();
-    if (apiVersion < min) {
-      throw new ConnectError(`requires server API version ${min}`, Code.Unimplemented);
-    }
   }
 
   async getStartedAt(): Promise<number> {

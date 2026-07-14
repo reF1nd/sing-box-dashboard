@@ -118,21 +118,19 @@ export type Route =
   | { page: "settings/preferences/terminal/custom"; scheme: "light" | "dark" }
   | { page: "settings/servers" };
 
-function decodeSegment(segment: string): string {
-  try {
-    return decodeURIComponent(segment);
-  } catch {
-    return segment;
-  }
-}
-
 function routeFromHash(locationHash: string): Route {
   const hash = locationHash.replace(/^#\/?/, "");
   const queryIndex = hash.indexOf("?");
   const query = new URLSearchParams(queryIndex >= 0 ? hash.slice(queryIndex + 1) : "");
   const segments = (queryIndex >= 0 ? hash.slice(0, queryIndex) : hash)
     .split("/")
-    .map(decodeSegment);
+    .map((segment) => {
+      try {
+        return decodeURIComponent(segment);
+      } catch {
+        return segment;
+      }
+    });
   switch (segments[0]) {
     case "groups":
       return { page: "groups" };
@@ -454,13 +452,6 @@ function DesktopApp(props: { host: DesktopHost }) {
     }
   }, [activeId, servers]);
 
-  const exitRemoteControl = (alert?: string) => {
-    selectServer(DESKTOP_LOCAL_SERVER.id);
-    if (alert !== undefined) {
-      showError(alert);
-    }
-  };
-
   const activeServer =
     state.serversState.servers.find((server) => server.id === activeId) ?? DESKTOP_LOCAL_SERVER;
   const local = activeServer.id === DESKTOP_LOCAL_SERVER.id;
@@ -504,7 +495,16 @@ function DesktopApp(props: { host: DesktopHost }) {
         server={activeServer}
         desktopLocal={local}
         desktopPicker={picker}
-        onExitRemote={local ? undefined : exitRemoteControl}
+        onExitRemote={
+          local
+            ? undefined
+            : (alert) => {
+                selectServer(DESKTOP_LOCAL_SERVER.id);
+                if (alert !== undefined) {
+                  showError(alert);
+                }
+              }
+        }
         serversState={state.serversState}
         onServersChange={state.updateServers}
         route={state.route}
@@ -974,15 +974,18 @@ function DeprecatedWarningsGate() {
     return null;
   }
 
-  const dismiss = () => {
-    setVisible(false);
-    setTimeout(() => {
-      setIndex((value) => value + 1);
-      setVisible(true);
-    }, 300);
-  };
-
-  return <DeprecatedWarningDialog warning={current} onDismiss={dismiss} />;
+  return (
+    <DeprecatedWarningDialog
+      warning={current}
+      onDismiss={() => {
+        setVisible(false);
+        setTimeout(() => {
+          setIndex((value) => value + 1);
+          setVisible(true);
+        }, 300);
+      }}
+    />
+  );
 }
 
 function DeprecatedWarningDialog(props: { warning: DeprecatedWarning; onDismiss: () => void }) {

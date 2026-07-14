@@ -20,24 +20,10 @@ import {
 
 export type { Language, MessageKey };
 
-function applyLanguage(language: Language) {
-  document.documentElement.lang = language;
-  document.documentElement.dir = language === "fa" ? "rtl" : "ltr";
-}
-
 export type TranslateParams = Record<string, string | number>;
 export type Translate = (key: MessageKey, params?: TranslateParams) => string;
 
 const pluralRulesCache = new Map<Language, Intl.PluralRules>();
-
-function pluralRules(language: Language): Intl.PluralRules {
-  let rules = pluralRulesCache.get(language);
-  if (!rules) {
-    rules = new Intl.PluralRules(language);
-    pluralRulesCache.set(language, rules);
-  }
-  return rules;
-}
 
 function translate(language: Language, key: MessageKey, params?: TranslateParams): string {
   const entry: string | PluralForms = language === "en" ? key : (TRANSLATIONS[key]?.[language] ?? key);
@@ -46,7 +32,16 @@ function translate(language: Language, key: MessageKey, params?: TranslateParams
     text = entry;
   } else {
     const count = typeof params?.count === "number" ? params.count : null;
-    text = (count !== null ? entry[pluralRules(language).select(count)] : undefined) ?? entry.other;
+    if (count === null) {
+      text = entry.other;
+    } else {
+      let rules = pluralRulesCache.get(language);
+      if (!rules) {
+        rules = new Intl.PluralRules(language);
+        pluralRulesCache.set(language, rules);
+      }
+      text = entry[rules.select(count)] ?? entry.other;
+    }
   }
   if (params) {
     for (const [name, value] of Object.entries(params)) {
@@ -86,7 +81,8 @@ export function I18nProvider(props: { children: ReactNode }) {
   const language = preference === "auto" ? systemLanguage : preference;
 
   useEffect(() => {
-    applyLanguage(language);
+    document.documentElement.lang = language;
+    document.documentElement.dir = language === "fa" ? "rtl" : "ltr";
   }, [language]);
 
   const value = useMemo<I18n>(

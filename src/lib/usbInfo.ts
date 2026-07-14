@@ -24,12 +24,8 @@ const USB_CLASS_NAMES: Record<number, string> = {
 
 const hex2 = (value: number) => `0x${value.toString(16).padStart(2, "0")}`;
 
-export function usbClassName(code: number): string | undefined {
-  return code === 0 ? undefined : (USB_CLASS_NAMES[code] ?? hex2(code));
-}
-
 export function usbClassTriplet(cls: number, sub: number, proto: number): string {
-  const name = usbClassName(cls) ?? hex2(cls);
+  const name = cls === 0 ? hex2(cls) : (USB_CLASS_NAMES[cls] ?? hex2(cls));
   return sub > 0 || proto > 0 ? `${name} · ${hex2(sub)} · ${hex2(proto)}` : name;
 }
 

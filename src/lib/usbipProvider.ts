@@ -43,16 +43,6 @@ function deviceLabel(device: USBDevice): string {
   return device.productName || formatVidPid(device.vendorId, device.productId);
 }
 
-function reconnectIntent(device: USBDevice): UsbDeviceIdentity {
-  return {
-    vendorId: device.vendorId,
-    productId: device.productId,
-    serialNumber: device.serialNumber,
-    manufacturerName: device.manufacturerName,
-    productName: device.productName,
-  };
-}
-
 function usbDevicesMatch(a: UsbDeviceIdentity, b: UsbDeviceIdentity): boolean {
   if (a.vendorId !== b.vendorId || a.productId !== b.productId) {
     return false;
@@ -217,10 +207,22 @@ export class UsbipProviderSession {
       return;
     }
     if (options.rememberReconnect && device) {
-      this.reconnectIntents.push(reconnectIntent(device));
+      this.reconnectIntents.push({
+        vendorId: device.vendorId,
+        productId: device.productId,
+        serialNumber: device.serialNumber,
+        manufacturerName: device.manufacturerName,
+        productName: device.productName,
+      });
     }
-    if (entry?.busId) {
-      this.suppressDetachedBusId(entry.busId);
+    const busId = entry?.busId;
+    if (busId) {
+      this.clearDetachedBusId(busId);
+      const timer = setTimeout(() => {
+        this.detachedBusIdTimers.delete(busId);
+        this.onUpdate();
+      }, DETACHED_BUS_ID_TTL_MS);
+      this.detachedBusIdTimers.set(busId, timer);
     }
     if (options.notifyServer && !this.closed) {
       this.stream.send({ message: { case: "detach", value: { deviceId } } });
@@ -258,15 +260,6 @@ export class UsbipProviderSession {
       matchedDeviceId = deviceId;
     }
     return matchedDeviceId;
-  }
-
-  private suppressDetachedBusId(busId: string): void {
-    this.clearDetachedBusId(busId);
-    const timer = setTimeout(() => {
-      this.detachedBusIdTimers.delete(busId);
-      this.onUpdate();
-    }, DETACHED_BUS_ID_TTL_MS);
-    this.detachedBusIdTimers.set(busId, timer);
   }
 
   private clearDetachedBusId(busId: string): void {

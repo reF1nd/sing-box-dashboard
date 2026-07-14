@@ -27,15 +27,6 @@ type NavigationGuard = (proceed: () => void) => void;
 
 let navigationGuard: NavigationGuard | null = null;
 
-function registerNavigationGuard(guard: NavigationGuard): () => void {
-  navigationGuard = guard;
-  return () => {
-    if (navigationGuard === guard) {
-      navigationGuard = null;
-    }
-  };
-}
-
 export function navigate(path: string) {
   const go = () => {
     location.hash = `#/${path}`;
@@ -53,14 +44,17 @@ export function useNavigationGuard(active: boolean, onBlock: NavigationGuard) {
     if (!active) {
       return;
     }
-    const unregister = registerNavigationGuard((proceed) => handler.current(proceed));
+    const guard = (proceed: () => void) => handler.current(proceed);
+    navigationGuard = guard;
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = "";
     };
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => {
-      unregister();
+      if (navigationGuard === guard) {
+        navigationGuard = null;
+      }
       window.removeEventListener("beforeunload", onBeforeUnload);
     };
   }, [active, handler]);
@@ -188,17 +182,13 @@ export function applyAccent(preference: AccentPreference) {
   } else {
     root.dataset.accent = "custom";
     root.style.setProperty("--custom-accent", preference);
-    root.style.setProperty("--on-accent", accentTextColor(preference));
+    const channel = (index: number) => {
+      const value = parseInt(preference.slice(1 + index * 2, 3 + index * 2), 16) / 255;
+      return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    };
+    const luminance = 0.2126 * channel(0) + 0.7152 * channel(1) + 0.0722 * channel(2);
+    root.style.setProperty("--on-accent", luminance > 0.45 ? "#1a1a1a" : "#ffffff");
   }
-}
-
-function accentTextColor(color: string): string {
-  const channel = (i: number) => {
-    const c = parseInt(color.slice(1 + i * 2, 3 + i * 2), 16) / 255;
-    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  };
-  const luminance = 0.2126 * channel(0) + 0.7152 * channel(1) + 0.0722 * channel(2);
-  return luminance > 0.45 ? "#1a1a1a" : "#ffffff";
 }
 
 export function watchSystemTheme(getPreference: () => ThemePreference): () => void {

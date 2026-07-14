@@ -21,8 +21,6 @@ export interface WebSocketStreamOptions<Req extends DescMessage, Res extends Des
   onEnd(status: GrpcStatus | null, error?: string): void;
 }
 
-const FINISH_SEND = new Uint8Array([1]);
-
 export class GrpcWebSocketStream<Req extends DescMessage, Res extends DescMessage> {
   private socket: WebSocket;
   private buffer = new Uint8Array(0);
@@ -73,19 +71,6 @@ export class GrpcWebSocketStream<Req extends DescMessage, Res extends DescMessag
     frame[4] = (data.length >>> 8) & 0xff;
     frame[5] = data.length & 0xff;
     frame.set(data, 6);
-    this.enqueue(frame);
-  }
-
-  finishSend() {
-    this.enqueue(FINISH_SEND);
-  }
-
-  close() {
-    this.ended = true;
-    this.socket.close();
-  }
-
-  private enqueue(frame: Uint8Array<ArrayBuffer>) {
     if (this.opened) {
       if (this.socket.readyState === WebSocket.OPEN) {
         this.socket.send(frame);
@@ -93,6 +78,11 @@ export class GrpcWebSocketStream<Req extends DescMessage, Res extends DescMessag
     } else {
       this.pendingSends.push(frame);
     }
+  }
+
+  close() {
+    this.ended = true;
+    this.socket.close();
   }
 
   private end(status: GrpcStatus | null, error?: string) {
