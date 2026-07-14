@@ -139,6 +139,7 @@ function AppSettingsContent({
   const [settings, setSettings] = useState<DesktopSettingsState | null>(null);
   const [cacheSize, setCacheSize] = useState<number | null>(null);
   const [clearing, setClearing] = useState(false);
+  const [savingOpenAtLogin, setSavingOpenAtLogin] = useState(false);
 
   useEffect(() => {
     let stale = false;
@@ -173,6 +174,13 @@ function AppSettingsContent({
       .finally(() => setClearing(false));
   };
 
+  const refreshOpenAtLogin = () =>
+    host.settings.get().then(({ openAtLogin }) => {
+      setSettings((current) =>
+        current === null ? current : { ...current, openAtLogin },
+      );
+    });
+
   return (
     <div className="page">
       <SettingsPageHeader title={t("App")} />
@@ -202,10 +210,19 @@ function AppSettingsContent({
                   role="switch"
                   aria-checked={settings.openAtLogin}
                   aria-label={t("Start At Login")}
+                  disabled={savingOpenAtLogin}
                   onClick={() => {
                     const value = !settings.openAtLogin;
                     setSettings({ ...settings, openAtLogin: value });
-                    host.settings.setOpenAtLogin(value).catch(showError);
+                    setSavingOpenAtLogin(true);
+                    host.settings
+                      .setOpenAtLogin(value)
+                      .then(refreshOpenAtLogin)
+                      .catch((error) => {
+                        showError(error);
+                        return refreshOpenAtLogin().catch(showError);
+                      })
+                      .finally(() => setSavingOpenAtLogin(false));
                   }}
                 />
               </div>
