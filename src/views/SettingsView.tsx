@@ -95,12 +95,12 @@ export function SettingsView() {
               title={t("Source Code")}
               href={
                 host !== null
-                  ? "https://github.com/SagerNet/sing-box"
-                  : "https://github.com/SagerNet/sing-box-dashboard"
+                  ? "https://github.com/reF1nd/sing-box"
+                  : "https://github.com/reF1nd/sing-box-dashboard"
               }
               contextMenu={
                 host !== null ? (
-                  <MenuLink href="https://github.com/SagerNet/sing-box/releases">
+                  <MenuLink href="https://github.com/reF1nd/sing-box-releases/releases">
                     {t("Releases")}
                   </MenuLink>
                 ) : undefined
