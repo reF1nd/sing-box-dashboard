@@ -189,6 +189,8 @@ export interface DesktopHost {
   };
   core: {
     info(): Promise<{ version: string }>;
+    securitySettings(): Promise<{ available: boolean; insecureModeEnabled: boolean }>;
+    setInsecureModeEnabled(enabled: boolean): Promise<void>;
     workingDirectory(): Promise<{ path: string; size: number }>;
     destroyWorkingDirectory(): Promise<void>;
   };

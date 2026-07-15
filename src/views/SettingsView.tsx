@@ -488,6 +488,11 @@ function CoreViewContent({ host }: { host: DesktopHost }) {
   const api = useApi();
   const serviceStatus = useStream(api.serviceStatus);
   const [coreVersion, setCoreVersion] = useState<string | null>(null);
+  const [securitySettings, setSecuritySettings] = useState<{
+    available: boolean;
+    insecureModeEnabled: boolean;
+  } | null>(null);
+  const [savingInsecureMode, setSavingInsecureMode] = useState(false);
   const [dataSize, setDataSize] = useState<number | "unavailable" | null>(null);
   const [disableWarnings, setDisableWarnings] = useState(loadDisableDeprecatedWarnings);
   const [confirming, setConfirming] = useState(false);
@@ -518,6 +523,15 @@ function CoreViewContent({ host }: { host: DesktopHost }) {
   useEffect(() => {
     loadInfo();
   }, [loadInfo]);
+
+  const refreshSecuritySettings = useCallback(
+    () => host.core.securitySettings().then(setSecuritySettings),
+    [host],
+  );
+
+  useEffect(() => {
+    refreshSecuritySettings().catch(showError);
+  }, [refreshSecuritySettings]);
 
   const refreshSize = useCallback(() => {
     setDataSize(null);
@@ -569,6 +583,42 @@ function CoreViewContent({ host }: { host: DesktopHost }) {
                 )}
               </div>
             </div>
+            {securitySettings?.available && (
+              <div>
+                <div className="list-section-title">{t("Security")}</div>
+                <div className={styles.settingsList}>
+                  <div className="settings-row">
+                    <div className={styles.rowText}>
+                      <span className="settings-row-label">{t("Insecure Mode")}</span>
+                      <span className="hint">
+                        {t("Allow configurations to use privileges unrelated to networking.")}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className={securitySettings.insecureModeEnabled ? "switch on" : "switch"}
+                      role="switch"
+                      aria-checked={securitySettings.insecureModeEnabled}
+                      aria-label={t("Insecure Mode")}
+                      disabled={savingInsecureMode}
+                      onClick={() => {
+                        const enabled = !securitySettings.insecureModeEnabled;
+                        setSecuritySettings({ ...securitySettings, insecureModeEnabled: enabled });
+                        setSavingInsecureMode(true);
+                        host.core
+                          .setInsecureModeEnabled(enabled)
+                          .then(refreshSecuritySettings)
+                          .catch((error) => {
+                            showError(error);
+                            return refreshSecuritySettings().catch(showError);
+                          })
+                          .finally(() => setSavingInsecureMode(false));
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
             {coreVersion.includes("-") && (
               <div>
                 <div className="list-section-title">{t("Beta Settings")}</div>
