@@ -16,12 +16,28 @@ import { useStreamingAction } from "../app/hooks";
 import { useI18n } from "../app/i18n";
 import { Icon } from "../components/Icon";
 import { PageHeader } from "../components/PageHeader";
-import { Badge, Button, Card, DataLine, Dialog, Field, NavRow, Select, Spinner, Toggle } from "../components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  DataLine,
+  Dialog,
+  Field,
+  MenuItem,
+  MenuLabel,
+  NavRow,
+  Select,
+  Spinner,
+  Toggle,
+} from "../components/ui";
 import {
   ServiceStatus_Type,
   type NetworkQualityTestProgress,
   type STUNTestProgress,
+  type TailscaleEndpointStatus,
 } from "../gen/daemon/started_service_pb";
+import { allPeers, peerDisplayName, peerSSHAvailable } from "../lib/tailscaleSSH";
+import { useTailscaleSSH } from "./TailscaleSSHConnect";
 
 const NETWORK_QUALITY_DEFAULT_URL = "https://mensura.cdn-apple.com/api/v1/gm/config";
 const STUN_DEFAULT_SERVER = "stun.voipgate.com:3478";
@@ -124,19 +140,58 @@ function TailscaleEndpointRows() {
       <div className="list-section-title">{t("Endpoints")}</div>
       <div className="nav-list">
         {endpoints.map((endpoint) => (
-          <NavRow
+          <TailscaleEndpointRow
             key={endpoint.endpointTag}
-            icon="hub"
+            endpoint={endpoint}
             title={
               endpoints.length > 1 && endpoint.endpointTag !== ""
                 ? t("Tailscale: {tag}", { tag: endpoint.endpointTag })
                 : "Tailscale"
             }
-            onClick={() => navigate(`tools/tailscale/${encodeURIComponent(endpoint.endpointTag)}`)}
           />
         ))}
       </div>
     </div>
+  );
+}
+
+function TailscaleEndpointRow(props: { endpoint: TailscaleEndpointStatus; title: string }) {
+  const { t } = useI18n();
+  const ssh = useTailscaleSSH(props.endpoint.endpointTag);
+  const sshPeers = allPeers(props.endpoint).filter(peerSSHAvailable);
+
+  let connectMenu: ReactNode;
+  if (sshPeers.length === 1) {
+    connectMenu = (
+      <MenuItem icon="terminal" onSelect={() => ssh.connect(sshPeers[0])}>
+        {t("Connect via SSH")}
+      </MenuItem>
+    );
+  } else if (sshPeers.length > 1) {
+    connectMenu = (
+      <>
+        <MenuLabel>{t("Connect via SSH")}</MenuLabel>
+        {sshPeers.map((peer) => (
+          <MenuItem key={peer.stableID} onSelect={() => ssh.connect(peer)}>
+            {peerDisplayName(peer)}
+          </MenuItem>
+        ))}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <NavRow
+        icon="hub"
+        title={props.title}
+        onClick={() =>
+          navigate(`tools/tailscale/${encodeURIComponent(props.endpoint.endpointTag)}`)
+        }
+        contextMenu={connectMenu}
+      />
+      {ssh.element}
+    </>
   );
 }
 

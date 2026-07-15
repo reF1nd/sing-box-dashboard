@@ -66,6 +66,37 @@
   white-space: nowrap;
 }
 
+:global(.terminal-page) .window-header {
+  height: 52px;
+  min-height: 52px;
+  padding: 0 var(--space-12);
+  -webkit-app-region: drag;
+}
+
+:global(.terminal-page) .window-header :global(button),
+:global(.terminal-page) .window-header :global(.menu-anchor) {
+  -webkit-app-region: no-drag;
+}
+
+:global(.terminal-page) .window-header :global(.page-title) {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  letter-spacing: normal;
+}
+
+:global(body[data-platform="darwin"] .terminal-page) .window-header {
+  --titlebar-inset: 96px;
+
+  padding-inline-start: var(--titlebar-inset);
+}
+
+:global(body[data-platform="win32"] .terminal-page) .window-header {
+  --window-controls-inset: 150px;
+
+  padding-inline-end: var(--window-controls-inset);
+}
+
 :global(.terminal-page .xterm-viewport) {
   scrollbar-width: none;
 }

@@ -846,9 +846,20 @@ export function QRCode(props: { value: string }) {
   );
 }
 
-let openModalCount = 0;
+let openDialogCount = 0;
+let openDrawerCount = 0;
 
-function useShowModal(focusSelf = false) {
+function syncScrimAttribute() {
+  if (openDialogCount > 0) {
+    document.documentElement.dataset.scrim = "";
+  } else if (openDrawerCount > 0) {
+    document.documentElement.dataset.scrim = "drawer";
+  } else {
+    delete document.documentElement.dataset.scrim;
+  }
+}
+
+function useShowModal(kind: "dialog" | "drawer", focusSelf = false) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = ref.current;
@@ -856,19 +867,25 @@ function useShowModal(focusSelf = false) {
       return;
     }
     dialog.showModal();
-    openModalCount += 1;
-    document.documentElement.dataset.scrim = "";
+    if (kind === "drawer") {
+      openDrawerCount += 1;
+    } else {
+      openDialogCount += 1;
+    }
+    syncScrimAttribute();
     if (focusSelf) {
       dialog.focus();
     }
     return () => {
       dialog.close();
-      openModalCount -= 1;
-      if (openModalCount === 0) {
-        delete document.documentElement.dataset.scrim;
+      if (kind === "drawer") {
+        openDrawerCount -= 1;
+      } else {
+        openDialogCount -= 1;
       }
+      syncScrimAttribute();
     };
-  }, [focusSelf]);
+  }, [kind, focusSelf]);
   return ref;
 }
 
@@ -891,7 +908,7 @@ function closeOnBackdropPointerDown(
 }
 
 function Drawer(props: { onClose: () => void; ariaLabel: string; children: ReactNode }) {
-  const ref = useShowModal(true);
+  const ref = useShowModal("drawer", true);
   return (
     <dialog
       ref={ref}
@@ -920,7 +937,7 @@ function reactNodeText(node: ReactNode): string {
 }
 
 export function Dialog(props: { onClose: () => void; className?: string; children: ReactNode }) {
-  const ref = useShowModal();
+  const ref = useShowModal("dialog");
   let accessibleName = "Dialog";
   for (const child of Children.toArray(props.children)) {
     if (

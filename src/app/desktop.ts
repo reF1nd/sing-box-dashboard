@@ -152,6 +152,10 @@ export interface DesktopHost {
     onStateChanged(listener: (state: DaemonConnectionState) => void): () => void;
     retryConnection(): void;
   };
+  terminal: {
+    openWindow(route: string): void;
+    closeWindow(): void;
+  };
   setup: {
     repairInstall(): Promise<boolean>;
     repairStart(): Promise<boolean>;

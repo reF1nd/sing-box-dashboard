@@ -1,3 +1,4 @@
+import type { DescMessage, DescMethodBiDiStreaming } from "@bufbuild/protobuf";
 import type { Client, Transport } from "@connectrpc/connect";
 import { Code, ConnectError, createClient } from "@connectrpc/connect";
 import { createGrpcWebTransport } from "@connectrpc/connect-web";
@@ -16,6 +17,11 @@ import {
   TailscaleEndpointStatus,
   USBIPServerStatus,
 } from "../gen/daemon/started_service_pb";
+import {
+  openBidirectionalStream,
+  type BidirectionalStream,
+  type BidirectionalStreamHandlers,
+} from "./bidirectional";
 import { serverConnectUrl, type Server } from "./config";
 import { StreamStore } from "./stream";
 
@@ -94,6 +100,7 @@ const SUBSCRIPTION_INTERVAL = 1_000_000_000n;
 export class DaemonApi {
   readonly config: Server;
   readonly client: Client<typeof StartedService>;
+  private readonly bidirectionalTransport: Transport | undefined;
 
   readonly serviceStatus: StreamStore<ServiceStatusData>;
   readonly status: StreamStore<StatusData>;
@@ -110,6 +117,7 @@ export class DaemonApi {
 
   constructor(config: Server, transport?: Transport) {
     this.config = config;
+    this.bidirectionalTransport = transport;
     this.client = createClient(
       StartedService,
       transport ??
@@ -303,6 +311,13 @@ export class DaemonApi {
         }
       },
     );
+  }
+
+  openBidirectionalStream<I extends DescMessage, O extends DescMessage>(
+    method: DescMethodBiDiStreaming<I, O>,
+    handlers: BidirectionalStreamHandlers<O>,
+  ): BidirectionalStream<I> {
+    return openBidirectionalStream(this.config, method, handlers, this.bidirectionalTransport);
   }
 
   retryNow(): void {
