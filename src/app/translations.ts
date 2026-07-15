@@ -499,11 +499,11 @@ export const TRANSLATIONS = {
     "fa": "فایل‌های پیکربندی ممکن است حاوی محتوای خصوصی باشند و نباید عمومی شوند.",
     "ru": "Файлы конфигурации могут содержать личные данные и не должны публиковаться.",
   },
-  "Encrypt with age for Project S": {
-    "zh-Hans": "为 Project S 使用 age 加密",
-    "zh-Hant": "為 Project S 使用 age 加密",
-    "fa": "رمزگذاری با age برای Project S",
-    "ru": "Шифровать с помощью age для Project S",
+  "Encrypt with age for reF1nd": {
+    "zh-Hans": "使用 age 加密给 reF1nd",
+    "zh-Hant": "使用 age 加密給 reF1nd",
+    "fa": "رمزگذاری با age برای reF1nd",
+    "ru": "Зашифровать с помощью age для reF1nd",
   },
   "[age](https://github.com/filosottile/age) is a modern and secure asymmetric encryption tool. When enabled, the zip file is encrypted with this project's public key so it can be posted publicly, e.g. in GitHub issues.": {
     "zh-Hans": "[age](https://github.com/filosottile/age) 是一个现代且安全的非对称加密工具。启用后，zip 文件将使用本项目的公钥加密，因此可以公开发布，例如发布在 GitHub issue 中。",

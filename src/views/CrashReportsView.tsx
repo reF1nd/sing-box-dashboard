@@ -317,7 +317,7 @@ export function ReportShareDialog(props: {
         </div>
       )}
       <div className={styles.shareSection}>
-        <Toggle label={t("Encrypt with age for Project S")} value={encrypt} onChange={setEncrypt} />
+        <Toggle label={t("Encrypt with age for reF1nd")} value={encrypt} onChange={setEncrypt} />
         <div className="hint">
           <MarkdownLinkText
             text={t(
