@@ -13,15 +13,7 @@
 }
 
 .progress-row {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
   margin-top: var(--space-14);
-}
-
-.progress-label {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
 }
 
 .progress-track {

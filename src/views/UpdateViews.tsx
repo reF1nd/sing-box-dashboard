@@ -152,6 +152,8 @@ function UpdateDialog(props: {
   const [elevating, setElevating] = useState(false);
   const info = props.info;
   const busy = props.state.downloading || props.state.installing || elevating;
+  const progressIndeterminate = props.state.installing || props.state.downloadProgress <= 0;
+  const downloadProgress = Math.round(props.state.downloadProgress * 100);
 
   const close = () => {
     if (!busy) {
@@ -227,25 +229,17 @@ function UpdateDialog(props: {
       )}
       {busy && (
         <div className={styles.progressRow}>
-          <span className={styles.progressLabel}>
-            {props.state.installing ? t("Installing...") : t("Downloading...")}
-          </span>
           <div
             className={styles.progressTrack}
             role="progressbar"
+            aria-label={t(props.state.installing ? "Installing..." : "Downloading...")}
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-valuenow={
-              props.state.installing ? undefined : Math.round(props.state.downloadProgress * 100)
-            }
+            aria-valuenow={progressIndeterminate ? undefined : downloadProgress}
           >
             <div
-              className={props.state.installing ? styles.progressIndeterminate : styles.progressFill}
-              style={
-                props.state.installing
-                  ? undefined
-                  : { width: `${Math.round(props.state.downloadProgress * 100)}%` }
-              }
+              className={progressIndeterminate ? styles.progressIndeterminate : styles.progressFill}
+              style={progressIndeterminate ? undefined : { width: `${downloadProgress}%` }}
             />
           </div>
         </div>
