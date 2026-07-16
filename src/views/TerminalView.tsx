@@ -7,6 +7,7 @@ import "@xterm/xterm/css/xterm.css";
 import { useStream } from "../api/stream";
 import { useApi, useIsMobile } from "../app/context";
 import { useDesktopHost } from "../app/desktop";
+import { showError } from "../app/errorStore";
 import { useKeyboardInset, useTerminalConfig } from "../app/hooks";
 import { useI18n } from "../app/i18n";
 import { useLatestRef } from "../app/useLatest";
@@ -363,6 +364,7 @@ function TerminalSession(props: {
   onExit: (clean: boolean) => void;
 }) {
   const api = useApi();
+  const desktop = useDesktopHost();
   const { t } = useI18n();
   const hostRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -407,6 +409,63 @@ function TerminalSession(props: {
     terminal.focus();
     terminalRef.current = terminal;
     fitRef.current = fit;
+
+    const pasteClipboardText = (text: string | null) => {
+      if (text !== null && text !== "" && terminalRef.current === terminal) {
+        terminal.paste(text);
+      }
+    };
+    if (desktop?.platform === "win32") {
+      terminal.attachCustomKeyEventHandler((event) => {
+        const controlShortcut =
+          event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey;
+        if (controlShortcut && event.code === "KeyC" && terminal.hasSelection()) {
+          event.preventDefault();
+          void desktop.terminal
+            .writeClipboardText(terminal.getSelection())
+            .then(() => {
+              if (terminalRef.current === terminal) {
+                terminal.clearSelection();
+              }
+            })
+            .catch(showError);
+          return false;
+        }
+        if (
+          controlShortcut &&
+          event.code === "KeyV"
+        ) {
+          event.preventDefault();
+          void desktop.terminal.readClipboardText().then(pasteClipboardText).catch(showError);
+          return false;
+        }
+        return true;
+      });
+    }
+    const handleContextMenu = (event: MouseEvent) => {
+      if (desktop === null) {
+        return;
+      }
+      event.preventDefault();
+      void desktop.terminal
+        .openContextMenu(terminal.getSelection())
+        .then((result) => {
+          if (result?.action === "copy") {
+            if (terminalRef.current === terminal) {
+              terminal.clearSelection();
+            }
+          } else if (result?.action === "paste") {
+            pasteClipboardText(result.text);
+          }
+        })
+        .catch(showError)
+        .finally(() => {
+          if (terminalRef.current === terminal) {
+            terminal.focus();
+          }
+        });
+    };
+    host.addEventListener("contextmenu", handleContextMenu);
 
     let ready = false;
     let lastStatus: string | null = null;
@@ -519,6 +578,7 @@ function TerminalSession(props: {
     resizeObserver.observe(host);
 
     return () => {
+      host.removeEventListener("contextmenu", handleContextMenu);
       resizeObserver.disconnect();
       dataSubscription.dispose();
       resizeSubscription.dispose();
@@ -531,6 +591,7 @@ function TerminalSession(props: {
     };
   }, [
     api,
+    desktop,
     props.session,
     configRef,
     modifiersRef,
@@ -610,16 +671,15 @@ function TerminalSession(props: {
   };
 
   const handlePaste = () => {
-    const clipboard = navigator.clipboard;
-    if (clipboard?.readText) {
-      void clipboard.readText().then(
-        (text) => {
+    const readText = desktop?.terminal.readClipboardText() ?? navigator.clipboard?.readText();
+    if (readText) {
+      void readText
+        .then((text) => {
           if (text) {
-            sendRawRef.current?.(text);
+            terminalRef.current?.paste(text);
           }
-        },
-        () => {},
-      );
+        })
+        .catch(showError);
     }
     setModifiers((current) => consumeArmed(current));
     terminalRef.current?.focus();

@@ -142,6 +142,11 @@ export interface DesktopSettingsState {
   oomKillerKillConnections: boolean;
 }
 
+export type DesktopTerminalContextMenuResult =
+  | { action: "copy" }
+  | { action: "paste"; text: string }
+  | null;
+
 export interface DesktopHost {
   platform: string;
   appVersion(): Promise<string>;
@@ -155,6 +160,9 @@ export interface DesktopHost {
   terminal: {
     openWindow(route: string): void;
     closeWindow(): void;
+    readClipboardText(): Promise<string>;
+    writeClipboardText(text: string): Promise<void>;
+    openContextMenu(selectionText: string): Promise<DesktopTerminalContextMenuResult>;
   };
   setup: {
     repairInstall(): Promise<boolean>;
