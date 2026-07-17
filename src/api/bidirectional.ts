@@ -25,6 +25,7 @@ export interface BidirectionalStreamHandlers<O extends DescMessage> {
 
 export function openBidirectionalStream<I extends DescMessage, O extends DescMessage>(
   config: Server,
+  language: string,
   method: DescMethodBiDiStreaming<I, O>,
   handlers: BidirectionalStreamHandlers<O>,
   transport?: Transport,
@@ -34,6 +35,7 @@ export function openBidirectionalStream<I extends DescMessage, O extends DescMes
   }
   return new GrpcWebSocketStream({
     config,
+    language,
     service: method.parent.typeName,
     method: method.name,
     requestSchema: method.input,

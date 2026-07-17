@@ -13,6 +13,7 @@ export interface GrpcStatus {
 
 export interface WebSocketStreamOptions<Req extends DescMessage, Res extends DescMessage> {
   config: Server;
+  language: string;
   service: string;
   method: string;
   requestSchema: Req;
@@ -44,7 +45,7 @@ export class GrpcWebSocketStream<Req extends DescMessage, Res extends DescMessag
     this.socket = socket;
     socket.binaryType = "arraybuffer";
     socket.onopen = () => {
-      let headers = "content-type: application/grpc-web+proto\r\nx-grpc-web: 1\r\n";
+      let headers = `content-type: application/grpc-web+proto\r\nx-grpc-web: 1\r\naccept-language: ${options.language}\r\n`;
       if (options.config.secret) {
         headers += `authorization: Bearer ${options.config.secret}\r\n`;
       }

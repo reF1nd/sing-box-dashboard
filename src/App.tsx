@@ -593,14 +593,15 @@ interface ShellProps {
 
 function Shell(props: ShellProps) {
   const host = useDesktopHost();
+  const { language } = useI18n();
   const [generation, setGeneration] = useState(0);
   const api = useMemo(
     () =>
       host !== null && props.desktopLocal === true
-        ? new DaemonApi(props.server, host.transport)
-        : new DaemonApi(props.server),
+        ? new DaemonApi(props.server, language, host.transport)
+        : new DaemonApi(props.server, language),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [props.server, host, props.desktopLocal, generation],
+    [props.server, host, props.desktopLocal, language, generation],
   );
   return (
     <DesktopLocalContext.Provider value={host !== null && props.desktopLocal === true}>

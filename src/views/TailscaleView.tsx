@@ -176,7 +176,7 @@ function StatusCard(props: {
             value={
               <>
                 <StateDot tone={BACKEND_STATE_TONES[endpoint.backendState] ?? "neutral"} />
-                {endpoint.backendState || t("Unknown")}
+                {endpoint.stateText}
               </>
             }
           />

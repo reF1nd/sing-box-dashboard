@@ -113,6 +113,7 @@ export class DaemonApi {
   readonly config: Server;
   readonly client: Client<typeof StartedService>;
   private readonly bidirectionalTransport: Transport | undefined;
+  private readonly language: string;
 
   readonly serviceStatus: StreamStore<ServiceStatusData>;
   readonly status: StreamStore<StatusData>;
@@ -129,22 +130,24 @@ export class DaemonApi {
   private logSequence = 0;
   private versionCache: ServerInfo | null = null;
 
-  constructor(config: Server, transport?: Transport) {
+  constructor(config: Server, language: string, transport?: Transport) {
     this.config = config;
-    this.bidirectionalTransport = transport;
+    this.language = language;
+    this.bidirectionalTransport = transport ? withLanguageHeader(transport, language) : undefined;
     this.client = createClient(
       StartedService,
-      transport ??
+      this.bidirectionalTransport ??
         createGrpcWebTransport({
           baseUrl: serverConnectUrl(config.url),
-          interceptors: config.secret
-            ? [
-                (next) => (request) => {
-                  request.header.set("Authorization", `Bearer ${config.secret}`);
-                  return next(request);
-                },
-              ]
-            : [],
+          interceptors: [
+            (next) => (request) => {
+              request.header.set("Accept-Language", language);
+              if (config.secret) {
+                request.header.set("Authorization", `Bearer ${config.secret}`);
+              }
+              return next(request);
+            },
+          ],
         }),
     );
     this.serviceStatus = new StreamStore<ServiceStatusData>(
@@ -352,7 +355,13 @@ export class DaemonApi {
     method: DescMethodBiDiStreaming<I, O>,
     handlers: BidirectionalStreamHandlers<O>,
   ): BidirectionalStream<I> {
-    return openBidirectionalStream(this.config, method, handlers, this.bidirectionalTransport);
+    return openBidirectionalStream(
+      this.config,
+      this.language,
+      method,
+      handlers,
+      this.bidirectionalTransport,
+    );
   }
 
   retryNow(): void {
@@ -441,6 +450,20 @@ export class DaemonApi {
   async tailscaleLogout(endpointTag: string): Promise<void> {
     await this.client.tailscaleLogout({ endpointTag });
   }
+}
+
+function withLanguageHeader(transport: Transport, language: string): Transport {
+  const addLanguage = (header: HeadersInit | undefined) => {
+    const result = new Headers(header);
+    result.set("Accept-Language", language);
+    return result;
+  };
+  return {
+    unary: (method, signal, timeoutMs, header, input, contextValues) =>
+      transport.unary(method, signal, timeoutMs, addLanguage(header), input, contextValues),
+    stream: (method, signal, timeoutMs, header, input, contextValues) =>
+      transport.stream(method, signal, timeoutMs, addLanguage(header), input, contextValues),
+  };
 }
 
 function appendHistory(history: number[], value: number): number[] {

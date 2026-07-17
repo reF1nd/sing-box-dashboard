@@ -123,12 +123,15 @@ function useMenuKeyboard(controller: SubmenuController, closeMenu: () => void) {
 
 function TrayMenuContent(props: { host: DesktopHost }) {
   const host = props.host;
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const closeMenu = () => host.application.closeTrayMenu();
   useTrayTheme();
   const controller = useSubmenuController();
   useMenuKeyboard(controller, closeMenu);
-  const api = useMemo(() => new DaemonApi(TRAY_LOCAL_SERVER, host.transport), [host]);
+  const api = useMemo(
+    () => new DaemonApi(TRAY_LOCAL_SERVER, language, host.transport),
+    [host, language],
+  );
   const connection = useDaemonConnection(host);
   const serviceStatus = useStream(api.serviceStatus);
   const groups = useStream(api.groups);

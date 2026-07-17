@@ -380,11 +380,6 @@ a.menu-item {
   margin: calc(var(--space-20) * -1);
 }
 
-.nav-lines:not(:last-child) {
-  margin-bottom: var(--space-14);
-  border-bottom: 1px solid var(--border);
-}
-
 .nav-line {
   display: flex;
   gap: var(--space-10);

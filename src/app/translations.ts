@@ -224,6 +224,7 @@ export const TRANSLATIONS = {
   "Response": { "zh-Hans": "响应", "zh-Hant": "回應", "fa": "پاسخ", "ru": "Ответ" },
   "Verifying": { "zh-Hans": "正在验证", "zh-Hant": "正在驗證", "fa": "در حال تأیید", "ru": "Проверка" },
 
+  "Authentication": { "zh-Hans": "认证", "zh-Hant": "認證", "fa": "احراز هویت", "ru": "Аутентификация" },
   "Endpoint not found": { "zh-Hans": "未找到端点", "zh-Hant": "未找到端點", "fa": "نقطه اتصال یافت نشد", "ru": "Точка подключения не найдена" },
   "Connected": { "zh-Hans": "已连接", "zh-Hant": "已連線", "fa": "متصل", "ru": "Подключено" },
   "Not connected": { "zh-Hans": "未连接", "zh-Hant": "未連線", "fa": "متصل نیست", "ru": "Не подключено" },

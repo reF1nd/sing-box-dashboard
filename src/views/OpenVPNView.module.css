@@ -1,3 +1,13 @@
+.state-value {
+  display: inline-flex;
+  gap: var(--space-8);
+  align-items: center;
+}
+
+.auth-card {
+  padding: var(--space-14);
+}
+
 .auth-form {
   min-width: 0;
 }
@@ -6,15 +16,6 @@
   margin: 0 0 var(--space-14);
   line-height: 1.5;
   white-space: pre-wrap;
-}
-
-.inline-error {
-  margin-bottom: var(--space-14);
-  overflow-wrap: anywhere;
-}
-
-.status-error {
-  margin: var(--space-14) 0 0;
 }
 
 .actions {
