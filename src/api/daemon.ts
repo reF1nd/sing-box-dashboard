@@ -16,6 +16,8 @@ import {
   Status,
   TailscaleEndpointStatus,
   USBIPServerStatus,
+  type OpenConnectEndpointStatus,
+  type OpenVPNEndpointStatus,
 } from "../gen/daemon/started_service_pb";
 import {
   openBidirectionalStream,
@@ -90,6 +92,16 @@ export interface UsbipData {
   loaded: boolean;
 }
 
+export interface OpenConnectData {
+  endpoints: OpenConnectEndpointStatus[];
+  loaded: boolean;
+}
+
+export interface OpenVPNData {
+  endpoints: OpenVPNEndpointStatus[];
+  loaded: boolean;
+}
+
 export interface ServerInfo {
   version: string;
   apiVersion: number;
@@ -111,6 +123,8 @@ export class DaemonApi {
   readonly outbounds: StreamStore<OutboundsData>;
   readonly tailscale: StreamStore<TailscaleData>;
   readonly usbip: StreamStore<UsbipData>;
+  readonly openConnect: StreamStore<OpenConnectData>;
+  readonly openVPN: StreamStore<OpenVPNData>;
 
   private logSequence = 0;
   private versionCache: ServerInfo | null = null;
@@ -133,7 +147,6 @@ export class DaemonApi {
             : [],
         }),
     );
-
     this.serviceStatus = new StreamStore<ServiceStatusData>(
       () => ({ status: null }),
       async ({ signal, update }) => {
@@ -311,6 +324,28 @@ export class DaemonApi {
         }
       },
     );
+
+    this.openConnect = new StreamStore<OpenConnectData>(
+      () => ({ endpoints: [], loaded: false }),
+      async ({ signal, update }) => {
+        await this.requireApiVersion(MIN_API_VERSION.openVpnAndOpenConnect);
+        for await (const message of this.client.subscribeOpenConnectStatus({}, { signal })) {
+          update(() => ({ endpoints: message.endpoints, loaded: true }));
+        }
+      },
+      true,
+    );
+
+    this.openVPN = new StreamStore<OpenVPNData>(
+      () => ({ endpoints: [], loaded: false }),
+      async ({ signal, update }) => {
+        await this.requireApiVersion(MIN_API_VERSION.openVpnAndOpenConnect);
+        for await (const message of this.client.subscribeOpenVPNStatus({}, { signal })) {
+          update(() => ({ endpoints: message.endpoints, loaded: true }));
+        }
+      },
+      true,
+    );
   }
 
   openBidirectionalStream<I extends DescMessage, O extends DescMessage>(
@@ -330,6 +365,8 @@ export class DaemonApi {
     this.outbounds.retryNow();
     this.tailscale.retryNow();
     this.usbip.retryNow();
+    this.openConnect.retryNow();
+    this.openVPN.retryNow();
   }
 
   reconnectNow(): void {
@@ -378,6 +415,13 @@ export class DaemonApi {
       this.versionCache = { version: response.version, apiVersion: response.apiVersion };
     }
     return this.versionCache;
+  }
+
+  private async requireApiVersion(min: number): Promise<void> {
+    const { apiVersion } = await this.serverInfo();
+    if (apiVersion < min) {
+      throw new ConnectError(`requires server API version ${min}`, Code.Unimplemented);
+    }
   }
 
   async getStartedAt(): Promise<number> {

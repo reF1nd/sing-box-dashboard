@@ -9,7 +9,7 @@ import {
 } from "./api/config";
 import { DaemonApi } from "./api/daemon";
 import { formatDateTime, formatUptime, isHttpUrl } from "./api/format";
-import { isTerminalCode, useStream } from "./api/stream";
+import { isTerminalCode, useStream, type StreamStore } from "./api/stream";
 import { ServiceStatus_Type, type DeprecatedWarning } from "./gen/daemon/started_service_pb";
 import { CapabilitiesContext, makeCapabilities } from "./app/capabilities";
 import {
@@ -90,6 +90,8 @@ import { NetworkQualityView, STUNTestView, ToolsView } from "./views/ToolsView";
 import { TailscaleEndpointView } from "./views/TailscaleView";
 import { TailscaleSSHView } from "./views/TerminalView";
 import { UsbipView } from "./views/UsbipView";
+import { OpenConnectView } from "./views/OpenConnectView";
+import { OpenVPNView } from "./views/OpenVPNView";
 import styles from "./App.module.css";
 import { cx } from "./lib/cx";
 
@@ -110,6 +112,8 @@ export type Route =
   | { page: "tools/oom-reports" }
   | { page: "tools/oom-reports/detail"; name: string; recordedAt: number | null }
   | { page: "tools/oom-reports/file"; name: string; file: string; recordedAt: number | null }
+  | { page: "tools/openconnect"; tag: string }
+  | { page: "tools/openvpn"; tag: string }
   | { page: "settings" }
   | { page: "settings/app" }
   | { page: "settings/core" }
@@ -158,6 +162,10 @@ function routeFromHash(locationHash: string): Route {
           return { page: "tools/tailscale", tag: segments[2] ?? "" };
         case "usbip":
           return { page: "tools/usbip", tag: segments[2] ?? "" };
+        case "openconnect":
+          return { page: "tools/openconnect", tag: segments[2] ?? "" };
+        case "openvpn":
+          return { page: "tools/openvpn", tag: segments[2] ?? "" };
         case "crash-reports": {
           if (segments[2]) {
             const atParam = query.get("at");
@@ -229,8 +237,16 @@ function locationHashSnapshot(): string {
   return location.hash;
 }
 
+// Tools subpages that require the service to be started.
+// Unlike network-quality/stun, they fall back to the tools list rather than
+// overview when the service stops.
 function isStartedOnlyToolsSubpage(page: string): boolean {
-  return page.startsWith("tools/tailscale") || page.startsWith("tools/usbip");
+  return (
+    page.startsWith("tools/tailscale") ||
+    page.startsWith("tools/usbip") ||
+    page.startsWith("tools/openconnect") ||
+    page.startsWith("tools/openvpn")
+  );
 }
 
 function isLocalReportsPage(page: string): boolean {
@@ -259,6 +275,10 @@ function routeTitle(route: Route, t: Translate, language: string): string {
       return t("Tools");
     case "tools/usbip":
       return route.tag !== "" ? t("USB/IP: {tag}", { tag: route.tag }) : "USB/IP";
+    case "tools/openconnect":
+      return route.tag !== "" ? `OpenConnect: ${route.tag}` : "OpenConnect";
+    case "tools/openvpn":
+      return route.tag !== "" ? `OpenVPN: ${route.tag}` : "OpenVPN";
     case "tools/crash-reports":
       return t("Crash Report");
     case "tools/crash-reports/detail":
@@ -288,6 +308,17 @@ function routeTitle(route: Route, t: Translate, language: string): string {
     case "settings/servers":
       return t("Remote Control");
   }
+}
+
+function EndpointToolbarTitle<T>(props: {
+  stream: StreamStore<T>;
+  count: (data: T) => number;
+  tag: string;
+  title: string;
+  taggedTitle: string;
+}) {
+  const status = useStream(props.stream);
+  return props.count(status.data) > 1 && props.tag !== "" ? props.taggedTitle : props.title;
 }
 
 const DESKTOP_LOCAL_SERVER: Server = { id: "local", name: "sing-box", url: "", secret: "" };
@@ -670,6 +701,9 @@ function ShellContent(props: ShellProps & { onRetry: () => void }) {
       (route.page === "connections" && !started) ||
       (isStartedOnlyToolsSubpage(route.page) && !started) ||
       (route.page === "tools/usbip" && capabilities.ready && !capabilities.supports("usbip")) ||
+      ((route.page === "tools/openconnect" || route.page === "tools/openvpn") &&
+        capabilities.ready &&
+        !capabilities.supports("openVpnAndOpenConnect")) ||
       (isLocalReportsPage(route.page) && localHost === null);
     if (invisible) {
       navigate(
@@ -755,6 +789,8 @@ function ShellContent(props: ShellProps & { onRetry: () => void }) {
       {route.page === "tools/stun" && <STUNTestView />}
       {route.page === "tools/tailscale" && <TailscaleEndpointView tag={route.tag} />}
       {route.page === "tools/usbip" && <UsbipView tag={route.tag} />}
+      {route.page === "tools/openconnect" && <OpenConnectView tag={route.tag} />}
+      {route.page === "tools/openvpn" && <OpenVPNView tag={route.tag} />}
       {route.page === "tools/crash-reports" && <CrashReportListView />}
       {route.page === "tools/crash-reports/detail" && (
         <CrashReportDetailView name={route.name} crashedAt={route.crashedAt} />
@@ -862,7 +898,43 @@ function ShellContent(props: ShellProps & { onRetry: () => void }) {
         {host !== null ? (
           <div className={styles.contentColumn}>
             <DesktopToolbar
-              title={routeTitle(route, t, language)}
+              title={
+                route.page === "tools/tailscale" ? (
+                  <EndpointToolbarTitle
+                    stream={api.tailscale}
+                    count={(data) => data.endpoints.length}
+                    tag={route.tag}
+                    title="Tailscale"
+                    taggedTitle={t("Tailscale: {tag}", { tag: route.tag })}
+                  />
+                ) : route.page === "tools/usbip" ? (
+                  <EndpointToolbarTitle
+                    stream={api.usbip}
+                    count={(data) => data.servers.length}
+                    tag={route.tag}
+                    title="USB/IP"
+                    taggedTitle={t("USB/IP: {tag}", { tag: route.tag })}
+                  />
+                ) : route.page === "tools/openconnect" ? (
+                  <EndpointToolbarTitle
+                    stream={api.openConnect}
+                    count={(data) => data.endpoints.length}
+                    tag={route.tag}
+                    title="OpenConnect"
+                    taggedTitle={`OpenConnect: ${route.tag}`}
+                  />
+                ) : route.page === "tools/openvpn" ? (
+                  <EndpointToolbarTitle
+                    stream={api.openVPN}
+                    count={(data) => data.endpoints.length}
+                    tag={route.tag}
+                    title="OpenVPN"
+                    taggedTitle={`OpenVPN: ${route.tag}`}
+                  />
+                ) : (
+                  routeTitle(route, t, language)
+                )
+              }
               picker={props.desktopPicker}
               controls={
                 props.desktopLocal === true ? (

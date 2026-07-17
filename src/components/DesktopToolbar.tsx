@@ -17,7 +17,7 @@ import styles from "./DesktopToolbar.module.css";
 import { cx } from "../lib/cx";
 
 export function DesktopToolbar(props: {
-  title?: string;
+  title?: ReactNode;
   picker?: ReactNode;
   controls?: ReactNode;
   leadRef?: (element: HTMLElement | null) => void;

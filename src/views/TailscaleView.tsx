@@ -6,7 +6,7 @@ import { useApi, useIsMobile, useNow } from "../app/context";
 import { showError } from "../app/errorStore";
 import { useStreamingAction } from "../app/hooks";
 import { useI18n } from "../app/i18n";
-import { Icon, type IconName } from "../components/Icon";
+import { Icon } from "../components/Icon";
 import { StreamStates } from "../components/StreamBanner";
 import {
   Badge,
@@ -20,6 +20,8 @@ import {
   Field,
   IconButton,
   MenuItem,
+  NavLine,
+  NavLines,
   OthersMenu,
   QRCode,
   Sparkline,
@@ -34,7 +36,6 @@ import { allPeers, loadSSHPrefs, peerDisplayName } from "../lib/tailscaleSSH";
 import { useTailscaleSSH } from "./TailscaleSSHConnect";
 import { ToolsPageHeader } from "./ToolsView";
 import styles from "./TailscaleView.module.css";
-import { cx } from "../lib/cx";
 
 export function TailscaleEndpointView(props: { tag: string }) {
   const api = useApi();
@@ -168,20 +169,23 @@ function StatusCard(props: {
     <div>
       <div className="list-section-title">{t("Status")}</div>
       <Card>
-        <div className={styles.navLines}>
-          <div className={cx(styles.navLine, styles.static)}>
-            <Icon name="power_settings_new" size={15} />
-            <span className={styles.navLineLabel}>{t("State")}</span>
-            <span className={styles.navLineValue}>
-              <StateDot tone={BACKEND_STATE_TONES[endpoint.backendState] ?? "neutral"} />
-              {endpoint.backendState || t("Unknown")}
-            </span>
-          </div>
+        <NavLines>
+          <NavLine
+            icon="power_settings_new"
+            label={t("State")}
+            value={
+              <>
+                <StateDot tone={BACKEND_STATE_TONES[endpoint.backendState] ?? "neutral"} />
+                {endpoint.backendState || t("Unknown")}
+              </>
+            }
+          />
           {running && endpoint.self && (
             <NavLine
               icon="computer"
               label={t("This device")}
               value={peerDisplayName(endpoint.self)}
+              chevron
               onClick={props.onShowSelf}
             />
           )}
@@ -190,37 +194,25 @@ function StatusCard(props: {
               icon="router"
               label={t("Exit node")}
               value={endpoint.exitNode ? peerDisplayName(endpoint.exitNode) : t("Disabled")}
+              chevron
               onClick={props.onOpenExitPicker}
             />
           )}
           {endpoint.authURL !== "" && (
             <>
               {isHttpUrl(endpoint.authURL) && (
-                <a className={styles.navLine} href={endpoint.authURL} target="_blank" rel="noreferrer">
-                  <Icon name="open_in_new" size={15} />
-                  <span className={styles.navLineLabel}>{t("Open auth URL")}</span>
-                </a>
+                <NavLine icon="open_in_new" label={t("Open auth URL")} href={endpoint.authURL} />
               )}
-              <button type="button" className={styles.navLine} onClick={props.onOpenAuthQR}>
-                <Icon name="qr_code" size={15} />
-                <span className={styles.navLineLabel}>{t("Show auth URL QR code")}</span>
-              </button>
+              <NavLine
+                icon="qr_code"
+                label={t("Show auth URL QR code")}
+                onClick={props.onOpenAuthQR}
+              />
             </>
           )}
-        </div>
+        </NavLines>
       </Card>
     </div>
-  );
-}
-
-function NavLine(props: { icon: IconName; label: string; value: string; onClick: () => void }) {
-  return (
-    <button type="button" className={styles.navLine} onClick={props.onClick}>
-      <Icon name={props.icon} size={15} />
-      <span className={styles.navLineLabel}>{props.label}</span>
-      <span className={styles.navLineValue}>{props.value}</span>
-      <Icon name="keyboard_arrow_right" size={14} />
-    </button>
   );
 }
 

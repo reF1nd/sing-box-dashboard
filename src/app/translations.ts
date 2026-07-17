@@ -212,6 +212,18 @@ export const TRANSLATIONS = {
   "Binding...": { "zh-Hans": "正在绑定...", "zh-Hant": "正在綁定...", "fa": "در حال اتصال...", "ru": "Привязка..." },
   "Unknown": { "zh-Hans": "未知", "zh-Hant": "未知", "fa": "ناشناخته", "ru": "Неизвестно" },
 
+  "Flavor": { "zh-Hans": "协议类型", "zh-Hant": "協議類型", "fa": "نوع پروتکل", "ru": "Вариант протокола" },
+  "Transport": { "zh-Hans": "传输", "zh-Hant": "傳輸", "fa": "انتقال", "ru": "Транспорт" },
+  "Cipher": { "zh-Hans": "加密算法", "zh-Hant": "加密演算法", "fa": "رمز", "ru": "Шифр" },
+  "IPv4": { "zh-Hans": "IPv4", "zh-Hant": "IPv4", "fa": "IPv4", "ru": "IPv4" },
+  "IPv6": { "zh-Hans": "IPv6", "zh-Hant": "IPv6", "fa": "IPv6", "ru": "IPv6" },
+  "DNS": { "zh-Hans": "DNS", "zh-Hant": "DNS", "fa": "DNS", "ru": "DNS" },
+  "MTU": { "zh-Hans": "MTU", "zh-Hant": "MTU", "fa": "MTU", "ru": "MTU" },
+  "Submit": { "zh-Hans": "提交", "zh-Hant": "提交", "fa": "ارسال", "ru": "Отправить" },
+  "Password": { "zh-Hans": "密码", "zh-Hant": "密碼", "fa": "گذرواژه", "ru": "Пароль" },
+  "Response": { "zh-Hans": "响应", "zh-Hant": "回應", "fa": "پاسخ", "ru": "Ответ" },
+  "Verifying": { "zh-Hans": "正在验证", "zh-Hant": "正在驗證", "fa": "در حال تأیید", "ru": "Проверка" },
+
   "Endpoint not found": { "zh-Hans": "未找到端点", "zh-Hant": "未找到端點", "fa": "نقطه اتصال یافت نشد", "ru": "Точка подключения не найдена" },
   "Connected": { "zh-Hans": "已连接", "zh-Hant": "已連線", "fa": "متصل", "ru": "Подключено" },
   "Not connected": { "zh-Hans": "未连接", "zh-Hant": "未連線", "fa": "متصل نیست", "ru": "Не подключено" },

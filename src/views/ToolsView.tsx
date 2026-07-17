@@ -52,7 +52,7 @@ export function ToolsView() {
     <div className="page">
       <PageHeader title={t("Tools")} />
       <div className="settings-stack">
-        {started && <TailscaleEndpointRows />}
+        {started && <EndpointRows />}
         {started && <UsbipServerRows />}
         <div>
           <div className="list-section-title">{t("Network")}</div>
@@ -127,31 +127,83 @@ function DebugRows() {
   );
 }
 
-function TailscaleEndpointRows() {
+function EndpointRows() {
   const api = useApi();
   const { t } = useI18n();
   const tailscale = useStream(api.tailscale);
-  const endpoints = tailscale.data.endpoints;
-  if (!tailscale.data.loaded || endpoints.length === 0) {
+  const supportsVPN = useSupportsCapability("openVpnAndOpenConnect");
+  const endpoints = tailscale.data.loaded ? tailscale.data.endpoints : [];
+  const tailscaleRows = endpoints.map((endpoint) => (
+    <TailscaleEndpointRow
+      key={`tailscale/${endpoint.endpointTag}`}
+      endpoint={endpoint}
+      title={
+        endpoints.length > 1 && endpoint.endpointTag !== ""
+          ? t("Tailscale: {tag}", { tag: endpoint.endpointTag })
+          : "Tailscale"
+      }
+    />
+  ));
+  if (!supportsVPN) {
+    return <EndpointsSection rows={tailscaleRows} />;
+  }
+  return <OpenVPNAndOpenConnectEndpointRows tailscaleRows={tailscaleRows} />;
+}
+
+function OpenVPNAndOpenConnectEndpointRows(props: { tailscaleRows: ReactNode[] }) {
+  const api = useApi();
+  const openConnect = useStream(api.openConnect);
+  const openVPN = useStream(api.openVPN);
+  const rows = [
+    ...props.tailscaleRows,
+    ...openConnect.data.endpoints.map((endpoint) => (
+      <OpenConnectEndpointRow
+        key={`openconnect/${endpoint.endpointTag}`}
+        tag={endpoint.endpointTag}
+        showTag={openConnect.data.endpoints.length > 1}
+      />
+    )),
+    ...openVPN.data.endpoints.map((endpoint) => (
+      <OpenVPNEndpointRow
+        key={`openvpn/${endpoint.endpointTag}`}
+        tag={endpoint.endpointTag}
+        showTag={openVPN.data.endpoints.length > 1}
+      />
+    )),
+  ];
+  return <EndpointsSection rows={rows} />;
+}
+
+function EndpointsSection(props: { rows: ReactNode[] }) {
+  const { t } = useI18n();
+  if (props.rows.length === 0) {
     return null;
   }
   return (
     <div>
       <div className="list-section-title">{t("Endpoints")}</div>
-      <div className="nav-list">
-        {endpoints.map((endpoint) => (
-          <TailscaleEndpointRow
-            key={endpoint.endpointTag}
-            endpoint={endpoint}
-            title={
-              endpoints.length > 1 && endpoint.endpointTag !== ""
-                ? t("Tailscale: {tag}", { tag: endpoint.endpointTag })
-                : "Tailscale"
-            }
-          />
-        ))}
-      </div>
+      <div className="nav-list">{props.rows}</div>
     </div>
+  );
+}
+
+function OpenConnectEndpointRow(props: { tag: string; showTag: boolean }) {
+  return (
+    <NavRow
+      icon="route"
+      title={props.showTag && props.tag !== "" ? `OpenConnect: ${props.tag}` : "OpenConnect"}
+      onClick={() => navigate(`tools/openconnect/${encodeURIComponent(props.tag)}`)}
+    />
+  );
+}
+
+function OpenVPNEndpointRow(props: { tag: string; showTag: boolean }) {
+  return (
+    <NavRow
+      icon="route"
+      title={props.showTag && props.tag !== "" ? `OpenVPN: ${props.tag}` : "OpenVPN"}
+      onClick={() => navigate(`tools/openvpn/${encodeURIComponent(props.tag)}`)}
+    />
   );
 }
 

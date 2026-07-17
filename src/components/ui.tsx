@@ -237,6 +237,43 @@ export function NavRow(props: {
   );
 }
 
+export function NavLines(props: { children: ReactNode }) {
+  return <div className="nav-lines">{props.children}</div>;
+}
+
+export function NavLine(props: {
+  icon: IconName;
+  label: ReactNode;
+  value?: ReactNode;
+  chevron?: boolean;
+  onClick?: () => void;
+  href?: string;
+}) {
+  const inner = (
+    <>
+      <Icon name={props.icon} size={15} />
+      <span className="nav-line-label">{props.label}</span>
+      {props.value != null && <span className="nav-line-value">{props.value}</span>}
+      {props.chevron === true && <Icon name="keyboard_arrow_right" size={14} />}
+    </>
+  );
+  if (props.href != null) {
+    return (
+      <a className="nav-line" href={props.href} target="_blank" rel="noreferrer">
+        {inner}
+      </a>
+    );
+  }
+  if (props.onClick != null) {
+    return (
+      <button type="button" className="nav-line" onClick={props.onClick}>
+        {inner}
+      </button>
+    );
+  }
+  return <div className="nav-line static">{inner}</div>;
+}
+
 export function MenuLink(props: { href: string; children: ReactNode }) {
   return (
     <a className="menu-item" href={props.href} target="_blank" rel="noreferrer">
