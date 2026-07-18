@@ -147,6 +147,19 @@ export type DesktopTerminalContextMenuResult =
   | { action: "paste"; text: string }
   | null;
 
+export interface DesktopOpenConnectBrowserRequest {
+  url: string;
+  finalURL: string;
+  cookieNames: string[];
+  headerNames: string[];
+}
+
+export interface DesktopOpenConnectBrowserResult {
+  finalURL: string;
+  cookies: Array<{ name: string; value: string }>;
+  headers: Array<{ name: string; values: string[] }>;
+}
+
 export interface DesktopHost {
   platform: string;
   appVersion(): Promise<string>;
@@ -163,6 +176,11 @@ export interface DesktopHost {
     readClipboardText(): Promise<string>;
     writeClipboardText(text: string): Promise<void>;
     openContextMenu(selectionText: string): Promise<DesktopTerminalContextMenuResult>;
+  };
+  openConnectBrowser: {
+    authenticate(
+      request: DesktopOpenConnectBrowserRequest,
+    ): Promise<DesktopOpenConnectBrowserResult | null>;
   };
   setup: {
     repairInstall(): Promise<boolean>;

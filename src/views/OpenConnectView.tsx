@@ -1,24 +1,24 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
 
-import { formatRelativeTime, isHttpUrl, type DelayTone } from "../api/format";
+import { formatRelativeTime, type DelayTone } from "../api/format";
 import { useStream } from "../api/stream";
 import { useApi, useNow } from "../app/context";
+import { useDesktopHost } from "../app/desktop";
 import { showError } from "../app/errorStore";
 import { useI18n } from "../app/i18n";
 import { StreamStates } from "../components/StreamBanner";
 import {
   Button,
   Card,
-  CopyValue,
   DataLine,
-  Dialog,
-  QRCode,
   Spinner,
   StateDot,
 } from "../components/ui";
 import type {
+  OpenConnectAuthChallenge,
   OpenConnectAuthForm,
   OpenConnectAuthFormField,
+  OpenConnectBrowserRequest,
   OpenConnectTunnelInfo,
 } from "../gen/daemon/started_service_pb";
 import { ToolsPageHeader } from "./ToolsView";
@@ -31,8 +31,8 @@ export function OpenConnectView(props: { tag: string }) {
   const endpoint = status.data.endpoints.find(
     (entry) => entry.endpointTag === props.tag,
   );
-  const authForm =
-    endpoint?.state === "auth-pending" ? endpoint.authForm : undefined;
+  const authChallenge =
+    endpoint?.state === "auth-pending" ? endpoint.authChallenge : undefined;
 
   const endpointError = endpoint?.error ?? "";
   useEffect(() => {
@@ -40,6 +40,13 @@ export function OpenConnectView(props: { tag: string }) {
       showError(endpointError);
     }
   }, [endpointError]);
+
+  const challengeError = authChallenge?.error ?? "";
+  useEffect(() => {
+    if (challengeError !== "") {
+      showError(challengeError);
+    }
+  }, [challengeError]);
 
   return (
     <div className="page">
@@ -76,18 +83,36 @@ export function OpenConnectView(props: { tag: string }) {
               )}
             </div>
           </div>
-          {authForm && (
+          {authChallenge && (
             <div>
               <div className="list-section-title">{t("Authentication")}</div>
               <Card className={styles.authCard}>
-                {authForm.url !== "" ? (
-                  <AuthURLActions url={authForm.url} />
-                ) : (
-                  <AuthForm
-                    key={authForm.id}
+                {authChallenge.banner && (
+                  <div className={styles.quoteBanner}>
+                    {authChallenge.banner}
+                  </div>
+                )}
+                {authChallenge.message && (
+                  <p className={styles.message}>{authChallenge.message}</p>
+                )}
+                {authChallenge.challenge.case === "browser" ? (
+                  <BrowserChallenge
                     endpointTag={endpoint.endpointTag}
-                    form={authForm}
+                    challengeID={authChallenge.id}
+                    request={authChallenge.challenge.value}
                   />
+                ) : authChallenge.challenge.case === "form" ? (
+                  <AuthForm
+                    key={authChallenge.id}
+                    endpointTag={endpoint.endpointTag}
+                    challenge={authChallenge}
+                    form={authChallenge.challenge.value}
+                  />
+                ) : (
+                  <div className={styles.verifying} role="status">
+                    <Spinner />
+                    {t("Verifying")}
+                  </div>
                 )}
               </Card>
             </div>
@@ -105,29 +130,51 @@ const STATE_TONES: Record<string, DelayTone> = {
   error: "bad",
 };
 
-function AuthURLActions(props: { url: string }) {
+function BrowserChallenge(props: {
+  endpointTag: string;
+  challengeID: string;
+  request: OpenConnectBrowserRequest;
+}) {
+  const api = useApi();
+  const desktop = useDesktopHost();
   const { t } = useI18n();
-  const [qrOpen, setQROpen] = useState(false);
-  return (
-    <>
+  const [submitting, setSubmitting] = useState(false);
+
+  const authenticate = () => {
+    if (!desktop) return;
+    setSubmitting(true);
+    desktop.openConnectBrowser
+      .authenticate(props.request)
+      .then(async (result) => {
+        if (!result) return;
+        await api.client.submitOpenConnectAuthResponse({
+          endpointTag: props.endpointTag,
+          challengeID: props.challengeID,
+          response: {
+            case: "browser",
+            value: result,
+          },
+        });
+      })
+      .catch(showError)
+      .finally(() => setSubmitting(false));
+  };
+
+  if (desktop) {
+    return (
       <div className={styles.actions}>
-        {isHttpUrl(props.url) && (
-          <Button href={props.url} target="_blank" rel="noreferrer">
-            {t("Open auth URL")}
-          </Button>
-        )}
-        <Button onClick={() => setQROpen(true)}>
-          {t("Show auth URL QR code")}
+        <Button variant="primary" onClick={authenticate} disabled={submitting}>
+          {submitting && <Spinner />}
+          {t("Continue")}
         </Button>
       </div>
-      {qrOpen && (
-        <Dialog onClose={() => setQROpen(false)}>
-          <h3>{t("Auth URL")}</h3>
-          <QRCode value={props.url} />
-          <CopyValue value={props.url} className={styles.qrCopy} />
-        </Dialog>
-      )}
-    </>
+    );
+  }
+
+  return (
+    <p className={styles.message}>
+      {t("Browser SSO requires the native desktop application")}
+    </p>
   );
 }
 
@@ -165,7 +212,11 @@ function TunnelDetails(props: { info: OpenConnectTunnelInfo }) {
   );
 }
 
-function AuthForm(props: { endpointTag: string; form: OpenConnectAuthForm }) {
+function AuthForm(props: {
+  endpointTag: string;
+  challenge: OpenConnectAuthChallenge;
+  form: OpenConnectAuthForm;
+}) {
   const api = useApi();
   const { t } = useI18n();
   const idPrefix = useId();
@@ -184,13 +235,6 @@ function AuthForm(props: { endpointTag: string; form: OpenConnectAuthForm }) {
     (field) => (values[field.submissionKey] ?? "") === "",
   );
 
-  const formError = props.form.error;
-  useEffect(() => {
-    if (formError !== "") {
-      showError(formError);
-    }
-  }, [formError]);
-
   if (phase === "submitted") {
     return (
       <div className={styles.verifying} role="status">
@@ -204,10 +248,13 @@ function AuthForm(props: { endpointTag: string; form: OpenConnectAuthForm }) {
     event.preventDefault();
     setPhase("submitting");
     api.client
-      .submitOpenConnectAuthForm({
+      .submitOpenConnectAuthResponse({
         endpointTag: props.endpointTag,
-        formID: props.form.id,
-        values,
+        challengeID: props.challenge.id,
+        response: {
+          case: "form",
+          value: { values },
+        },
       })
       .then(() => setPhase("submitted"))
       .catch((error: unknown) => {
@@ -218,12 +265,6 @@ function AuthForm(props: { endpointTag: string; form: OpenConnectAuthForm }) {
 
   return (
     <form className={styles.authForm} onSubmit={submit}>
-      {props.form.banner && (
-        <div className={styles.quoteBanner}>{props.form.banner}</div>
-      )}
-      {props.form.message && (
-        <p className={styles.message}>{props.form.message}</p>
-      )}
       {props.form.fields.map((field, index) => {
         const id = `${idPrefix}-${index}`;
         const value = values[field.submissionKey] ?? "";

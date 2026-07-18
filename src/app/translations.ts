@@ -229,6 +229,7 @@ export const TRANSLATIONS = {
   "Connected": { "zh-Hans": "已连接", "zh-Hant": "已連線", "fa": "متصل", "ru": "Подключено" },
   "Not connected": { "zh-Hans": "未连接", "zh-Hant": "未連線", "fa": "متصل نیست", "ru": "Не подключено" },
   "Open auth URL": { "zh-Hans": "打开认证链接", "zh-Hant": "開啟認證連結", "fa": "باز کردن لینک احراز هویت", "ru": "Открыть URL авторизации" },
+  "Browser SSO requires the native desktop application": { "zh-Hans": "浏览器 SSO 需要原生桌面客户端", "zh-Hant": "瀏覽器 SSO 需要原生桌面用戶端", "fa": "ورود یکپارچه مرورگر به برنامه دسکتاپ بومی نیاز دارد", "ru": "Для браузерного SSO требуется нативное настольное приложение" },
   "Show auth URL QR code": { "zh-Hans": "显示认证链接二维码", "zh-Hant": "顯示認證連結 QR 碼", "fa": "نمایش QR کد لینک احراز هویت", "ru": "Показать QR-код авторизации" },
   "Auth URL": { "zh-Hans": "认证链接", "zh-Hant": "認證連結", "fa": "لینک احراز هویت", "ru": "URL авторизации" },
   "This device": { "zh-Hans": "此设备", "zh-Hant": "此裝置", "fa": "این دستگاه", "ru": "Это устройство" },
