@@ -92,9 +92,11 @@
 }
 
 :global(body[data-platform="win32"] .terminal-page) .window-header {
-  --window-controls-inset: 150px;
+  padding-inline-end: calc(var(--window-controls-width, 138px) + var(--space-12));
+}
 
-  padding-inline-end: var(--window-controls-inset);
+:global(body[data-platform="linux"] .terminal-page) .window-header {
+  padding-inline-end: calc(var(--window-controls-width, 96px) + var(--space-12));
 }
 
 :global(.terminal-page .xterm-viewport) {
