@@ -73,7 +73,11 @@ import {
   oomReportTitle,
 } from "./views/reportFormat";
 import { OverviewView } from "./views/OverviewView";
-import { ImportProfileFileDialog, ImportRemoteProfileDialog } from "./views/ProfileViews";
+import {
+  ImportProfileFileDialog,
+  ImportRemoteProfileDialog,
+  ProfileContentWindow,
+} from "./views/ProfileViews";
 import {
   AppSettingsView,
   CoreView,
@@ -121,7 +125,8 @@ export type Route =
   | { page: "settings/preferences/terminal" }
   | { page: "settings/preferences/terminal/theme"; scheme: "light" | "dark" }
   | { page: "settings/preferences/terminal/custom"; scheme: "light" | "dark" }
-  | { page: "settings/servers" };
+  | { page: "settings/servers" }
+  | { page: "profile-editor"; profileId: string; readOnly: boolean };
 
 function routeFromHash(locationHash: string): Route {
   const hash = locationHash.replace(/^#\/?/, "");
@@ -137,6 +142,15 @@ function routeFromHash(locationHash: string): Route {
       }
     });
   switch (segments[0]) {
+    case "profile-editor":
+      if (segments[1]) {
+        return {
+          page: "profile-editor",
+          profileId: segments[1],
+          readOnly: query.get("readOnly") === "true",
+        };
+      }
+      return { page: "overview" };
     case "groups":
       return { page: "groups" };
     case "connections":
@@ -307,6 +321,8 @@ function routeTitle(route: Route, t: Translate, language: string): string {
       return t("Custom theme");
     case "settings/servers":
       return t("Remote Control");
+    case "profile-editor":
+      return route.readOnly ? t("View Content") : t("Edit Content");
   }
 }
 
@@ -496,6 +512,16 @@ function DesktopApp(props: { host: DesktopHost }) {
       onSelect={selectServer}
     />
   );
+
+  if (state.route.page === "profile-editor") {
+    return (
+      <ProfileContentWindow
+        host={host}
+        profileId={state.route.profileId}
+        readOnly={state.route.readOnly}
+      />
+    );
+  }
 
   if (local && connection.phase !== "connected") {
     if (!connectionHasResolved) {

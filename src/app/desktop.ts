@@ -177,6 +177,12 @@ export interface DesktopHost {
     writeClipboardText(text: string): Promise<void>;
     openContextMenu(selectionText: string): Promise<DesktopTerminalContextMenuResult>;
   };
+  profileEditor: {
+    openWindow(profileId: string, readOnly: boolean): void;
+    closeWindow(): void;
+    setDirty(dirty: boolean): void;
+    onCloseRequested(listener: () => void): () => void;
+  };
   openConnectBrowser: {
     authenticate(
       request: DesktopOpenConnectBrowserRequest,
