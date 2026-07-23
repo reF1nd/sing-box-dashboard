@@ -151,7 +151,9 @@ export interface DesktopOpenConnectBrowserRequest {
   url: string;
   finalURL: string;
   cookieNames: string[];
+  earlyCookieNames: string[];
   headerNames: string[];
+  callbackURLPrefixes: string[];
 }
 
 export interface DesktopOpenConnectBrowserResult {
@@ -185,8 +187,11 @@ export interface DesktopHost {
   };
   openConnectBrowser: {
     authenticate(
+      browserSessionID: string,
+      storageID: string,
       request: DesktopOpenConnectBrowserRequest,
     ): Promise<DesktopOpenConnectBrowserResult | null>;
+    cancel(browserSessionID: string): void;
   };
   setup: {
     repairInstall(): Promise<boolean>;

@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 
 import { formatRelativeTime, type DelayTone } from "../api/format";
 import { useStream } from "../api/stream";
@@ -7,13 +7,7 @@ import { useDesktopHost } from "../app/desktop";
 import { showError } from "../app/errorStore";
 import { useI18n } from "../app/i18n";
 import { StreamStates } from "../components/StreamBanner";
-import {
-  Button,
-  Card,
-  DataLine,
-  Spinner,
-  StateDot,
-} from "../components/ui";
+import { Button, Card, DataLine, Spinner, StateDot } from "../components/ui";
 import type {
   OpenConnectAuthChallenge,
   OpenConnectAuthForm,
@@ -97,6 +91,7 @@ export function OpenConnectView(props: { tag: string }) {
                 )}
                 {authChallenge.challenge.case === "browser" ? (
                   <BrowserChallenge
+                    key={`${endpoint.endpointTag}:${authChallenge.id}`}
                     endpointTag={endpoint.endpointTag}
                     challengeID={authChallenge.id}
                     request={authChallenge.challenge.value}
@@ -138,15 +133,37 @@ function BrowserChallenge(props: {
   const api = useApi();
   const desktop = useDesktopHost();
   const { t } = useI18n();
-  const [submitting, setSubmitting] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const browserSessionID = useRef<string | null>(null);
+  const disposed = useRef(false);
 
-  const authenticate = () => {
-    if (!desktop) return;
-    setSubmitting(true);
-    desktop.openConnectBrowser
-      .authenticate(props.request)
-      .then(async (result) => {
-        if (!result) return;
+  useEffect(() => {
+    disposed.current = false;
+    return () => {
+      disposed.current = true;
+      if (desktop && browserSessionID.current) {
+        desktop.openConnectBrowser.cancel(browserSessionID.current);
+        browserSessionID.current = null;
+      }
+    };
+  }, [desktop]);
+
+  const authenticate = async () => {
+    if (!desktop || busy) return;
+    const currentBrowserSessionID = crypto.randomUUID();
+    browserSessionID.current = currentBrowserSessionID;
+    setBusy(true);
+    let submitted = false;
+    try {
+      const storageID = props.request.cacheID
+        ? `${props.request.cacheID}:${props.endpointTag}`
+        : props.endpointTag;
+      const result = await desktop.openConnectBrowser.authenticate(
+        currentBrowserSessionID,
+        storageID,
+        props.request,
+      );
+      if (result && !disposed.current) {
         await api.client.submitOpenConnectAuthResponse({
           endpointTag: props.endpointTag,
           challengeID: props.challengeID,
@@ -155,17 +172,51 @@ function BrowserChallenge(props: {
             value: result,
           },
         });
-      })
-      .catch(showError)
-      .finally(() => setSubmitting(false));
+        submitted = true;
+      }
+    } catch (error: unknown) {
+      desktop.openConnectBrowser.cancel(currentBrowserSessionID);
+      if (!disposed.current) showError(error);
+    } finally {
+      if (browserSessionID.current === currentBrowserSessionID) {
+        browserSessionID.current = null;
+      }
+      if (!disposed.current && !submitted) {
+        setBusy(false);
+      }
+    }
+  };
+
+  const restartAuthentication = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await api.client.cancelOpenConnectAuthChallenge({
+        endpointTag: props.endpointTag,
+        challengeID: props.challengeID,
+      });
+    } catch (error: unknown) {
+      if (!disposed.current) showError(error);
+    } finally {
+      if (!disposed.current) {
+        setBusy(false);
+      }
+    }
   };
 
   if (desktop) {
     return (
       <div className={styles.actions}>
-        <Button variant="primary" onClick={authenticate} disabled={submitting}>
-          {submitting && <Spinner />}
+        <Button
+          variant="primary"
+          onClick={() => void authenticate()}
+          disabled={busy}
+        >
+          {busy && <Spinner />}
           {t("Continue")}
+        </Button>
+        <Button onClick={() => void restartAuthentication()} disabled={busy}>
+          {t("Cancel")}
         </Button>
       </div>
     );
